@@ -1,0 +1,39 @@
+{
+  "name": "@typeix/rexxar",
+  "version": "1.0.0",
+  "description": "mvc framework for typescript",
+  "main": "build/index.js",
+  "scripts": {
+    "compile": "tsc",
+    "test": "npm run compile && jest -c jest-runner.json"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/typeix/rexxar.git"
+  },
+  "keywords": [
+    "typeix",
+    "modules",
+    "typescript"
+  ],
+  "author": "igor.zg1987@gmail.com",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/typeix/rexxar/issues"
+  },
+  "homepage": "https://github.com/typeix/rexxar#readme",
+  "devDependencies": {
+    "@types/jest": "^22.2.3",
+    "@types/node": "^9.6.12",
+    "jest": "^22.4.3",
+    "ts-jest": "^22.4.5",
+
+    "tslint": "^5.10.0",
+    "typescript": "^2.9.2"
+  },
+  "dependencies": {
+    "@typeix/di": "~1.4.5",
+    "@typeix/utils": "~1.4.1",
+    "@typeix/modules": "~1.4.0"
+  }
+}
