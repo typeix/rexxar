@@ -13,9 +13,9 @@ let map = (type, value?: any) => {
     let metadata: IMetadataValue = {
       args: {
         type,
-        key,
         value
       },
+      key,
       name: METADATA_KEY
     };
     defineMetadata(METADATA_KEY, metadata, Class, key);

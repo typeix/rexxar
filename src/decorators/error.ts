@@ -4,7 +4,7 @@ import {defineMetadata, IMetadataValue} from "@typeix/di";
  * @since 1.0.0
  * @decorator
  * @function
- * @name Chain
+ * @name Error
  *
  * @description
  * Chain propagate data from FilterBefore -> BeforeEach -> Before -> Action -> After -> AfterEach -> FilterAfter
@@ -13,23 +13,18 @@ import {defineMetadata, IMetadataValue} from "@typeix/di";
  * import {Chain, Param, Controller, Action, Inject} from "typeix";
  *
  * \@Controller({
- *    name: "myController"
+ *    name: "core"
  * })
  * class MyController{
  *
- *     \@Before("index")
- *     actionIndex() {
- *        return "My Index";
- *     }
- *
- *     \@Action("index")
- *     actionIndex(@Chain data, @Param("file") file: string) {
+ *     \@Action("error")
+ *     actionIndex(@ErrorMessage data) {
  *        return "My Index " + data;
  *     }
  * }
  */
-export let Chain: ParameterDecorator = (Class: Object, key: string | symbol, paramIndex: number): void => {
-  let METADATA_KEY = "typeix:mvc:action:@Chain";
+export let ErrorMessage: ParameterDecorator = (Class: Object, key: string | symbol, paramIndex: number): void => {
+  let METADATA_KEY = "typeix:mvc:action:@ErrorMessage";
   let metadata: IMetadataValue = {
     args: {},
     key,
