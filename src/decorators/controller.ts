@@ -3,12 +3,12 @@ import {isArray, isClass} from "@typeix/utils";
 import {defineMetadata, IMetadataValue, verifyProviders} from "@typeix/di";
 
 /**
- * Controller metadata key
+ * ControllerResolver metadata key
  * @type {string}
  */
-export const CONTROLLER_METADATA_KEY = "typeix:rexxar:@Controller";
+export const CONTROLLER_METADATA_KEY = "typeix:rexxar:@ControllerResolver";
 /**
- * Controller
+ * ControllerResolver
  * @decorator
  * @function
  * @name Controller

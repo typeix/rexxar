@@ -11,9 +11,9 @@ export let CHAIN_METADATA_KEY = "typeix:rexxar:@Chain";
  * Chain propagate data from FilterBefore -> BeforeEach -> Before -> Action -> After -> AfterEach -> FilterAfter
  *
  * @example
- * import {Chain, Param, Controller, Action, Inject} from "@typeix/rexxar";
+ * import {Chain, Param, ControllerResolver, Action, Inject} from "@typeix/rexxar";
  *
- * \@Controller({
+ * \@ControllerResolver({
  *    name: "myController"
  * })
  * class MyController{

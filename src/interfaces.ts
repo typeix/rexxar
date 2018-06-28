@@ -1,4 +1,5 @@
 import {IProvider} from "@typeix/di";
+import {StatusCodes} from "@typeix/utils";
 
 
 /**
@@ -20,7 +21,7 @@ export interface IFilter {
  * @name IControllerMetadata
  *
  * @description
- * Controller metadata
+ * ControllerResolver metadata
  */
 export interface IControllerMetadata {
   name: string;
@@ -37,4 +38,46 @@ export interface IControllerMetadata {
  */
 export interface TFilter {
   new (): IFilter;
+}
+/**
+ * @since 1.0.0
+ * @interface
+ * @name IConnection
+ * @param {String} method
+ * @param {String} url
+ * @param {String} httpVersion
+ * @param {Number} httpVersionMajor
+ * @param {Number} httpVersionMinor
+ * @param {String} remoteAddress
+ * @param {String} remoteFamily
+ * @param {Number} remotePort
+ * @param {String} localAddress
+ * @param {Number} localPort
+ *
+ * @description
+ * Current connection data
+ */
+export interface IConnection {
+  uuid: string;
+  method: string;
+  url: string;
+  httpVersion: string;
+  httpVersionMajor: number;
+  httpVersionMinor: number;
+  remoteAddress: string;
+  remoteFamily: string;
+  remotePort: number;
+  localAddress: string;
+  localPort: number;
+}
+/**
+ * @since 1.0.0
+ * @interface
+ * @name Redirect
+ * @description
+ * Status enums
+ */
+export interface IRedirect {
+  url: string;
+  code: StatusCodes;
 }

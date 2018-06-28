@@ -11,9 +11,9 @@ export let PARAM_METADATA_KEY = "typeix:rexxar:@Param";
  * Define Param metadata to deliver it from router
  *
  * @example
- * import {Param, Controller, Action, Inject} from "@typeix/rexxar";
+ * import {Param, ControllerResolver, Action, Inject} from "@typeix/rexxar";
  *
- * \@Controller({
+ * \@ControllerResolver({
  *    name: "myController"
  * })
  * class MyController{
@@ -27,12 +27,16 @@ export let PARAM_METADATA_KEY = "typeix:rexxar:@Param";
  *     }
  * }
  */
-export let Param: ParameterDecorator = (Class: Object, key: string | symbol, paramIndex: number): void => {
-  let metadata: IMetadataValue = {
-    args: {},
-    key,
-    name: PARAM_METADATA_KEY,
-    paramIndex
+export let Param: ParameterDecorator = (value: string) => {
+  return (Class: Object, key: string | symbol, paramIndex: number): void => {
+    let metadata: IMetadataValue = {
+      args: {
+        value
+      },
+      key,
+      name: PARAM_METADATA_KEY,
+      paramIndex
+    };
+    defineMetadata(PARAM_METADATA_KEY, metadata, Class, key);
   };
-  defineMetadata(PARAM_METADATA_KEY, metadata, Class, key);
-};
+}

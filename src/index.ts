@@ -1,3 +1,10 @@
 export {Module, IModuleMetadata} from "./decorators/module";
 export {Controller} from "./decorators/controller";
 export {IFilter, IControllerMetadata} from "./interfaces";
+export {Before, After, BeforeEach, AfterEach, Action} from "./decorators/action";
+export {Chain} from "./decorators/chain";
+export {ErrorMessage} from "./decorators/error";
+export {Filter} from "./decorators/filter";
+export {Param} from "./decorators/param";
+export {Produces} from "./decorators/produces";
+export {Provider} from "./decorators/provider";

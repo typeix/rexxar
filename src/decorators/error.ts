@@ -11,9 +11,9 @@ export let ERROR_MESSAGE_METADATA_KEY = "typeix:rexxar:@ErrorMessage";
  * Chain propagate data from FilterBefore -> BeforeEach -> Before -> Action -> After -> AfterEach -> FilterAfter
  *
  * @example
- * import {Chain, Param, Controller, Action, Inject} from "@typeix/rexxar";
+ * import {Chain, Param, ControllerResolver, Action, Inject} from "@typeix/rexxar";
  *
- * \@Controller({
+ * \@ControllerResolver({
  *    name: "core"
  * })
  * class MyController{

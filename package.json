@@ -24,7 +24,7 @@
   "homepage": "https://github.com/typeix/rexxar#readme",
   "devDependencies": {
     "@types/jest": "^22.2.3",
-    "@types/node": "^9.6.12",
+    "@types/node": "^9.6.22",
     "jest": "^22.4.3",
     "ts-jest": "^22.4.5",
     "tslint": "^5.10.0",
@@ -32,7 +32,8 @@
   },
   "dependencies": {
     "@typeix/di": "~1.4.5",
-    "@typeix/utils": "~1.4.1",
-    "@typeix/modules": "~1.4.0"
+    "@typeix/modules": "~1.4.0",
+    "@typeix/router": "^1.4.3",
+    "@typeix/utils": "^1.4.2"
   }
 }
