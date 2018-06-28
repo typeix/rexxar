@@ -10,7 +10,7 @@ import {defineMetadata, IMetadataValue} from "@typeix/di";
  * Chain propagate data from FilterBefore -> BeforeEach -> Before -> Action -> After -> AfterEach -> FilterAfter
  *
  * @example
- * import {Chain, Param, Controller, Action, Inject} from "typeix";
+ * import {Chain, Param, Controller, Action, Inject} from "@typeix/rexxar";
  *
  * \@Controller({
  *    name: "myController"
@@ -29,7 +29,7 @@ import {defineMetadata, IMetadataValue} from "@typeix/di";
  * }
  */
 export let Chain: ParameterDecorator = (Class: Object, key: string | symbol, paramIndex: number): void => {
-  let METADATA_KEY = "typeix:mvc:action:@Chain";
+  let METADATA_KEY = "typeix:mvc:@Chain";
   let metadata: IMetadataValue = {
     args: {},
     key,

@@ -10,7 +10,7 @@ import {defineMetadata, IMetadataValue} from "@typeix/di";
  * Chain propagate data from FilterBefore -> BeforeEach -> Before -> Action -> After -> AfterEach -> FilterAfter
  *
  * @example
- * import {Chain, Param, Controller, Action, Inject} from "typeix";
+ * import {Chain, Param, Controller, Action, Inject} from "@typeix/rexxar";
  *
  * \@Controller({
  *    name: "core"
@@ -24,7 +24,7 @@ import {defineMetadata, IMetadataValue} from "@typeix/di";
  * }
  */
 export let ErrorMessage: ParameterDecorator = (Class: Object, key: string | symbol, paramIndex: number): void => {
-  let METADATA_KEY = "typeix:mvc:action:@ErrorMessage";
+  let METADATA_KEY = "typeix:mvc:@ErrorMessage";
   let metadata: IMetadataValue = {
     args: {},
     key,

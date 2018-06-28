@@ -1,0 +1,38 @@
+import {defineMetadata, IMetadataValue} from "@typeix/di";
+
+/**
+ * @since 1.0.0
+ * @decorator
+ * @function
+ * @name Param
+ *
+ * @description
+ * Define Param metadata to deliver it from router
+ *
+ * @example
+ * import {Param, Controller, Action, Inject} from "@typeix/rexxar";
+ *
+ * \@Controller({
+ *    name: "myController"
+ * })
+ * class MyController{
+ *
+ *     \@Inject(AssetLoader)
+ *     myAssetLoaderService: AssetLoader;
+ *
+ *     \@Action("index")
+ *     assetLoader(@Param("file") file: string) {
+ *        return this.myAssetLoaderService.load(file);
+ *     }
+ * }
+ */
+export let Param: ParameterDecorator = (Class: Object, key: string | symbol, paramIndex: number): void => {
+  let METADATA_KEY = "typeix:mvc:@Param";
+  let metadata: IMetadataValue = {
+    args: {},
+    key,
+    name: METADATA_KEY,
+    paramIndex
+  };
+  defineMetadata(METADATA_KEY, metadata, Class, key);
+};

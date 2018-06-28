@@ -30,9 +30,7 @@ export interface IModuleMetadata extends AIModuleMetadata{
  * Define module in your application
  *
  * @example
- * import {Module} from "@typeix/modules";
- * import {Logger} from "@typeix/utils";
- * import {Router} from "@typeix/router";
+ * import {Module, Logger, Router} from "@typeix/rexxar";
  *
  * \@Module({
  *  providers:[Logger, Router]

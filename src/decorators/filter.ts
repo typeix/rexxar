@@ -1,4 +1,5 @@
 import {defineMetadata, IMetadataValue} from "@typeix/di";
+
 /**
  * metadata key
  * @type {string}
@@ -15,7 +16,7 @@ export const FILTER_METADATA_KEY = "typeix:mvc:@Filter";
  * Filter is used as pre controller and after controller actions
  *
  * @example
- * import {IFilter, Filter, Request, Inject} from "typeix";
+ * import {IFilter, Filter, Request, Inject} from "@typeix/rexxar";
  *
  * \@Filter(100)
  * export class Cache implements IFilter {
