@@ -1,5 +1,6 @@
 import {defineMetadata, IMetadataValue} from "@typeix/di";
 
+export let ERROR_MESSAGE_METADATA_KEY = "typeix:rexxar:@ErrorMessage";
 /**
  * @since 1.0.0
  * @decorator
@@ -24,12 +25,12 @@ import {defineMetadata, IMetadataValue} from "@typeix/di";
  * }
  */
 export let ErrorMessage: ParameterDecorator = (Class: Object, key: string | symbol, paramIndex: number): void => {
-  let METADATA_KEY = "typeix:mvc:@ErrorMessage";
+
   let metadata: IMetadataValue = {
     args: {},
     key,
-    name: METADATA_KEY,
+    name: ERROR_MESSAGE_METADATA_KEY,
     paramIndex
   };
-  defineMetadata(METADATA_KEY, metadata, Class, key);
+  defineMetadata(ERROR_MESSAGE_METADATA_KEY, metadata, Class, key);
 };

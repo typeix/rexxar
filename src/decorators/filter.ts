@@ -4,7 +4,7 @@ import {defineMetadata, IMetadataValue} from "@typeix/di";
  * metadata key
  * @type {string}
  */
-export const FILTER_METADATA_KEY = "typeix:mvc:@Filter";
+export const FILTER_METADATA_KEY = "typeix:rexxar:@Filter";
 
 /**
  * @since 1.0.0

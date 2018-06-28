@@ -9,7 +9,7 @@ import {isObject} from "@typeix/utils";
  */
 let map = (type, value?: any) => {
   return (Class: Function, key: string | symbol, descriptor: PropertyDescriptor): any => {
-    let METADATA_KEY = "typeix:mvc:@" + type;
+    let METADATA_KEY = "typeix:rexxar:@" + type;
     let metadata: IMetadataValue = {
       args: {
         type,

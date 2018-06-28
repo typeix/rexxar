@@ -1,5 +1,6 @@
 import {defineMetadata, IMetadataValue} from "@typeix/di";
 
+export let PARAM_METADATA_KEY = "typeix:rexxar:@Param";
 /**
  * @since 1.0.0
  * @decorator
@@ -27,12 +28,11 @@ import {defineMetadata, IMetadataValue} from "@typeix/di";
  * }
  */
 export let Param: ParameterDecorator = (Class: Object, key: string | symbol, paramIndex: number): void => {
-  let METADATA_KEY = "typeix:mvc:@Param";
   let metadata: IMetadataValue = {
     args: {},
     key,
-    name: METADATA_KEY,
+    name: PARAM_METADATA_KEY,
     paramIndex
   };
-  defineMetadata(METADATA_KEY, metadata, Class, key);
+  defineMetadata(PARAM_METADATA_KEY, metadata, Class, key);
 };
