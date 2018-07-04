@@ -1,7 +1,17 @@
 import {IncomingMessage, ServerResponse} from "http";
 import {EventEmitter} from "events";
 import {Url} from "url";
-import {getProviderName, IMetadataValue, Inject, Injectable, Injector, IProvider, verifyProviders} from "@typeix/di";
+import {
+  InMemoryMetadataCache,
+  getProviderName,
+  IMetadataValue,
+  Inject,
+  Injectable,
+  Injector,
+  IProvider,
+  verifyProviders,
+  IMetadata, getMetadata
+} from "@typeix/di";
 import {
   isArray,
   isDate,
@@ -16,6 +26,62 @@ import {
 } from "@typeix/utils";
 import {fromRestMethod, IResolvedRoute, RestMethods} from "@typeix/router";
 import {IConnection, IControllerMetadata} from "../interfaces";
+import {ERROR_KEY} from "./request";
+
+const DNX = /#(.*)/;
+const TX_PARAMS = "#design:paramtypes";
+
+/**
+ * Return decorator name
+ * @param {string} name
+ * @returns {string}
+ */
+function getDecorator(name: string) {
+  if (DNX.test(name)) {
+    return name.replace(DNX, "$1");
+  }
+  return "typeix:rexxar:@" + name;
+}
+
+/**
+ * Get all metadata
+ * @param {Object} token
+ * @param {boolean} inherited
+ * @returns {IMetadata[]}
+ */
+function getAllMetadata(token: Object, inherited = true): IMetadata[] {
+  return InMemoryMetadataCache.getAllMetadata(token, inherited);
+}
+
+/**
+ * Get metadata by decorator
+ * @param {Object} token
+ * @param {string} decorator
+ * @returns {IMetadata | undefined}
+ */
+function getMetadataByDecorator(token: Object, decorator: string): IMetadata[] {
+  return getAllMetadata(token).filter(
+    (item: IMetadata) => item.metadataKey === getDecorator(decorator)
+  );
+}
+
+/**
+ * Get metadata args
+ * @param {Object} token
+ * @param {string} decorator
+ * @param {string} targetKey
+ * @returns {any}
+ */
+function getMetadataArgs(token: Object, decorator: string, targetKey?: string) {
+  let metadata = getAllMetadata(token).find(
+    (item: IMetadata) =>
+      item.metadataKey === getDecorator(decorator) && item.targetKey === targetKey
+  );
+  if (isDefined(metadata)) {
+    return metadata.metadataValue.args;
+  }
+  return null;
+}
 
 /**
  * Cookie parse regex
@@ -265,11 +331,11 @@ export class ControllerResolver {
    * @description
    * Check if controller has mapped action
    */
-  hasMappedAction(controllerProvider: IProvider, actionName: String, name: String = "Action"): boolean {
-    let mappings = Metadata.getMetadata(controllerProvider.provide.prototype, FUNCTION_KEYS)
-      .filter((item: IAction) => ControllerResolver.isControllerInherited(controllerProvider.provide, item.proto));
-
-    return isDefined(mappings.find(item => item.type === name && item.value === actionName));
+  hasMappedAction(controllerProvider: IProvider, actionName: String, name: string = "Action"): boolean {
+    return isDefined(
+      getMetadataByDecorator(controllerProvider.provide.prototype, name)
+        .find(item => item.metadataValue.args.value === actionName)
+    );
   }
 
   /**
@@ -280,24 +346,10 @@ export class ControllerResolver {
    * @description
    * Returns a mapped action metadata
    */
-  getMappedAction(controllerProvider: IProvider, actionName: String, name: String = "Action"): IAction {
+  getMappedAction(controllerProvider: IProvider, actionName: String, name: string = "Action"): IMetadata {
     // get mappings from controller
-    let mappings = Metadata
-      .getMetadata(controllerProvider.provide.prototype, FUNCTION_KEYS)
-      .filter((item: IAction) =>
-        item.type === name && item.value === actionName &&
-        ControllerResolver.isControllerInherited(controllerProvider.provide, item.proto)
-      );
-
-    let mappedAction;
-    // search mapped on current controller
-    if (mappings.length > 0) {
-      mappedAction = mappings.find(item => item.className === getProviderName(controllerProvider.provide));
-    }
-    // get first parent one from inheritance
-    if (!isDefined(mappedAction)) {
-      mappedAction = mappings.pop();
-    }
+    let mappedAction = getMetadataByDecorator(controllerProvider.provide.prototype, name)
+      .find(item => item.metadataValue.args.value === actionName);
     // check if action is present
     if (!isDefined(mappedAction)) {
       throw new ServerError(
@@ -322,12 +374,12 @@ export class ControllerResolver {
    * @description
    * Get param decorator by mapped action
    */
-  getDecoratorByMappedAction(controllerProvider: IProvider, mappedAction: any, paramName: string): any {
+  getDecoratorByMappedAction(controllerProvider: IProvider, mappedAction: IMetadata, paramName: string): any {
     // get mappings from controller
-    let mappings = Metadata.getMetadata(controllerProvider.provide.prototype, FUNCTION_KEYS);
-    return mappings.find((item: IAction) =>
-      item.type === paramName && item.key === mappedAction.key &&
-      ControllerResolver.isControllerInherited(controllerProvider.provide, item.proto)
+    return getMetadataArgs(
+      controllerProvider.provide.prototype,
+      paramName,
+      mappedAction.metadataValue.args.value
     );
   }
 
@@ -339,10 +391,9 @@ export class ControllerResolver {
    * @description
    * Get list of action arguments
    */
-  getMappedActionArguments(controllerProvider: IProvider, mappedAction: any): Array<any> {
+  getMappedActionArguments(controllerProvider: IProvider, mappedAction: IMetadata): Array<any> {
     // get mappings from controller
-    let mappings = Metadata.getMetadata(controllerProvider.provide.prototype, FUNCTION_PARAMS);
-    return mappings.filter((item: IParam) => item.key === mappedAction.key);
+    return getMetadataArgs(controllerProvider.provide.prototyp, TX_PARAMS, mappedAction.targetKey);
   }
 
 
@@ -356,11 +407,11 @@ export class ControllerResolver {
    */
   processAction(injector: Injector,
                 controllerProvider: IProvider,
-                mappedAction: IAction): string | Buffer {
+                mappedAction: IMetadata): string | Buffer {
     // get controller instance
     let controllerInstance = injector.get(controllerProvider.provide);
     // get action
-    let action = controllerInstance[mappedAction.key].bind(controllerInstance);
+    let action = controllerInstance[mappedAction.targetKey].bind(controllerInstance);
     // content type
     let contentType: IMetadataValue = this.getDecoratorByMappedAction(controllerProvider, mappedAction, "Produces");
 
@@ -419,8 +470,8 @@ export class ControllerResolver {
                        metadata: IControllerMetadata,
                        isAfter: boolean): Promise<any> {
 
-    let filters = metadata.filters.filter(item => {
-      let filterMetadata = Metadata.getComponentConfig(item);
+    let filters = verifyProviders(metadata.filters).filter(item => {
+      let filterMetadata = getMetadataArgs(item.provide, "Filter");
       if (isDefined(filterMetadata)) {
         return (
           filterMetadata.route === "*" ||
@@ -431,8 +482,8 @@ export class ControllerResolver {
       return false;
     })
       .sort((aItem, bItem) => {
-        let a: any = Metadata.getComponentConfig(aItem);
-        let b: any = Metadata.getComponentConfig(bItem);
+        let a: any = getMetadataArgs(aItem.provide, "Filter");
+        let b: any = getMetadataArgs(bItem.provide, "Filter");
         if (a.priority > b.priority) {
           return -1;
         } else if (a.priority < b.priority) {
@@ -477,7 +528,7 @@ export class ControllerResolver {
                           controllerProvider: IProvider,
                           actionName: String): Promise<any> {
     // get controller metadata
-    let metadata: IControllerMetadata = Metadata.getComponentConfig(controllerProvider.provide);
+    let metadata = getMetadataArgs(controllerProvider.provide, "Controller");
     let providers: Array<IProvider> = verifyProviders(metadata.providers);
     // limit controller api
     let limitApi = ["request", "response", "controllerProvider", "modules"];

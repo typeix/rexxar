@@ -1,10 +1,11 @@
 import {IAfterConstruct, Inject, Injectable, Injector, IProvider} from "@typeix/di";
-import {isDefined, isString, isTruthy, Logger, ServerError, StatusCodes} from "@typeix/utils";
-import {RestMethods, Router} from "@typeix/router";
+import {isDefined, isFalsy, isString, isTruthy, Logger, ServerError, StatusCodes} from "@typeix/utils";
+import {IResolvedRoute, RestMethods, Router} from "@typeix/router";
 import {IncomingMessage, ServerResponse} from "http";
 import {EventEmitter} from "events";
 import {Url} from "url";
 import {IRedirect} from "../interfaces";
+import {ControllerResolver} from "./controller";
 
 
 export const MODULE_KEY = "__module__";
@@ -242,7 +243,7 @@ export class RequestResolver implements IAfterConstruct {
 
     }
 
-    return await clean(data.toString());
+    return await Logger.clean(data.toString());
   }
 
   /**
@@ -334,7 +335,7 @@ export class RequestResolver implements IAfterConstruct {
      */
     let childInjector = Injector.createAndResolveChild(
       resolvedModule.module.injector,
-      Controller,
+      ControllerResolver,
       providers
     );
     /**
@@ -345,7 +346,7 @@ export class RequestResolver implements IAfterConstruct {
      * Get request instance
      * @type {any}
      */
-    let pRequest: Controller = childInjector.get(Controller);
+    let pRequest: ControllerResolver = childInjector.get(ControllerResolver);
     /**
      * Process request
      */

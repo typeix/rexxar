@@ -6,7 +6,7 @@ import {defineMetadata, IMetadataValue, verifyProviders} from "@typeix/di";
  * ControllerResolver metadata key
  * @type {string}
  */
-export const CONTROLLER_METADATA_KEY = "typeix:rexxar:@ControllerResolver";
+export const CONTROLLER_METADATA_KEY = "typeix:rexxar:@Controller";
 /**
  * ControllerResolver
  * @decorator
