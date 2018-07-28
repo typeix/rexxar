@@ -138,77 +138,73 @@ describe("RequestResolver", () => {
   });
 
 
-     test("Should getControllerProvider no route", () => {
+  test("Should getControllerProvider no route", () => {
 
-       @Controller({
-         name: "core"
-       })
-       class MyController {
+    @Controller({
+      name: "core"
+    })
+    class MyController {
 
-         @Action("index")
-         actionIndex() {
-         }
-       }
+      @Action("index")
+      actionIndex() {
+      }
+    }
 
-       @Module({
-         name: "root",
-         controllers: [MyController],
-         providers: []
-       })
-       class MyModule {
-       }
+    @Module({
+      name: "root",
+      controllers: [MyController],
+      providers: []
+    })
+    class MyModule {
+    }
 
-       resolvedRoute.route = "test/index";
+    resolvedRoute.route = "test/index";
 
-       expect(() => {
-         let moduleInjector = ModuleInjector.createAndResolve(MyModule);
-         let requestResolver = createResolver(id, data, request, response, moduleInjector);
-         let resolvedModule = requestResolver.getResolvedModule(resolvedRoute);
-         RequestResolver.getControllerProvider(resolvedModule);
-       }).toThrow( /You must define controller within current route: test\/index/g);
-     });
+    expect(() => {
+      let moduleInjector = ModuleInjector.createAndResolve(MyModule);
+      let requestResolver = createResolver(id, data, request, response, moduleInjector);
+      let resolvedModule = requestResolver.getResolvedModule(resolvedRoute);
+      RequestResolver.getControllerProvider(resolvedModule);
+    }).toThrow(/You must define controller within current route: test\/index/g);
+  });
+
+
+  test("Should processModule", (done) => {
+
+    let value = "MY_VALUE";
+
+    @Controller({
+      name: "core"
+    })
+    class MyController {
+
+      @Action("index")
+      actionIndex() {
+        return value;
+      }
+    }
+
+    @Module({
+      name: "root",
+      providers: [Logger, Router],
+      controllers: [MyController]
+    })
+    class MyModule {
+    }
+
+
+    let moduleInjector = ModuleInjector.createAndResolve(MyModule);
+    let requestResolver = createResolver(id, data, request, response, moduleInjector);
+    let resolvedModule = requestResolver.getResolvedModule(resolvedRoute);
+
+    Promise.resolve(requestResolver.processModule(resolvedModule))
+      .then(resolved => {
+        expect(resolved).toEqual(value);
+        done();
+      }).catch(done);
+  });
 
   /*
-       test("Should processModule", (done) => {
-
-         let value = "MY_VALUE";
-
-         @Controller({
-           name: "core"
-         })
-         class MyController {
-
-           @Action("index")
-           actionIndex() {
-             return value;
-           }
-         }
-
-         @Module({
-           name: "root",
-           providers: [Logger, Router],
-           controllers: [MyController]
-         })
-         class MyModule {
-         }
-
-         let modules: Array<IModule> = createModule(MyModule);
-         let module: IResolvedModule = {
-           module: getModule(modules),
-           controller: "core",
-           action: "index",
-           resolvedRoute,
-           data
-         };
-
-         Promise.resolve(routeResolver.processModule(module))
-           .then(resolved => {
-             assert.equal(resolved, value);
-             done();
-           }).catch(done);
-       });
-
-
        test("Should process GET", (done) => {
 
          let value = "MY_VALUE";
