@@ -585,91 +585,91 @@ describe("ControllerResolver", () => {
 
   });
 
+
+  test("ControllerResolver.processController with stopChain", (done) => {
+
+    @Filter(10)
+    class AFilter implements IFilter {
+
+      before(data: string): string | Buffer | Promise<string | Buffer> {
+        return "aFilter <- " + data;
+      }
+
+      after(data: string): string | Buffer | Promise<string | Buffer> {
+        return "aFilter <- " + data;
+      }
+
+    }
+
+    @Filter(20)
+    class BFilter implements IFilter {
+
+      before(data: string): string | Buffer | Promise<string | Buffer> {
+        return "bFilter <- " + data;
+      }
+
+      after(data: string): string | Buffer | Promise<string | Buffer> {
+        return "bFilter <- " + data;
+      }
+
+    }
+
+    @Controller({
+      name: "root",
+      filters: [AFilter, BFilter]
+    })
+    class A {
+
+      @Inject(Request)
+      private request: Request;
+
+      @BeforeEach
+      actionBeforeEach(@Chain chain: string): string {
+        return "beforeEach <- " + chain;
+      }
+
+      @Before("index")
+      actionBefore(@Chain chain: string): string {
+        return "before <- " + chain;
+      }
+
+      @Action("index")
+      actionIndex(@Chain chain: string): string {
+
+        return "action <- " + chain;
+      }
+
+      @After("index")
+      actionAfter(@Chain chain: string): string {
+        this.request.stopChain();
+        return "after <- " + chain;
+      }
+
+      @AfterEach
+      actionAfterEach(@Chain chain: string): string {
+        return "afterEach <- " + chain;
+      }
+
+    }
+
+    let injector = Injector.createAndResolve(Logger, []);
+    let result = fakeControllerActionCall(
+      injector,
+      verifyProvider(A),
+      "index"
+    );
+    expect(result).toBeInstanceOf(Promise);
+
+    result.then(data => {
+      expect(data).not.toBeNull();
+      expect(data).toBe("after <- action <- before <- beforeEach <- aFilter <- bFilter <- null");
+      done();
+    })
+      .catch(done);
+
+  });
+
   /*
-             test("ControllerResolver.processController with stopChain", (done) => {
-
-               @Filter(10)
-               class AFilter implements IFilter {
-
-                 before(data: string): string | Buffer | Promise<string | Buffer> {
-                   return "aFilter <- " + data;
-                 }
-
-                 after(data: string): string | Buffer | Promise<string | Buffer> {
-                   return "aFilter <- " + data;
-                 }
-
-               }
-
-               @Filter(20)
-               class BFilter implements IFilter {
-
-                 before(data: string): string | Buffer | Promise<string | Buffer> {
-                   return "bFilter <- " + data;
-                 }
-
-                 after(data: string): string | Buffer | Promise<string | Buffer> {
-                   return "bFilter <- " + data;
-                 }
-
-               }
-
-               @Controller({
-                 name: "root",
-                 filters: [AFilter, BFilter]
-               })
-               class A {
-
-                 @Inject(Request)
-                 private request: Request;
-
-                 @BeforeEach
-                 actionBeforeEach(@Chain chain: string): string {
-                   return "beforeEach <- " + chain;
-                 }
-
-                 @Before("index")
-                 actionBefore(@Chain chain: string): string {
-                   return "before <- " + chain;
-                 }
-
-                 @Action("index")
-                 actionIndex(@Chain chain: string): string {
-
-                   return "action <- " + chain;
-                 }
-
-                 @After("index")
-                 actionAfter(@Chain chain: string): string {
-                   this.request.stopChain();
-                   return "after <- " + chain;
-                 }
-
-                 @AfterEach
-                 actionAfterEach(@Chain chain: string): string {
-                   return "afterEach <- " + chain;
-                 }
-
-               }
-
-               let injector = Injector.createAndResolve(Logger, []);
-               let result = fakeControllerActionCall(
-                 injector,
-                 Metadata.verifyProvider(A),
-                 "index"
-               );
-               assert.instanceOf(result, Promise);
-
-               result.then(data => {
-                 assert.isNotNull(data);
-                 assert.deepEqual(data, "after <- action <- before <- beforeEach <- aFilter <- bFilter <- null");
-                 done();
-               })
-                 .catch(done);
-
-             });
-
-
              test("ControllerResolver.processController with stopChain in Filter 1", (done) => {
 
                @Filter(10)
