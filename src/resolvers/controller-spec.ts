@@ -89,9 +89,11 @@ describe("ControllerResolver", () => {
 
   test("ControllerResolver.process", () => {
     let aSpy = jest.spyOn(controllerResolver, "processController");
-    aSpy.mockReturnValue(0);
+    aSpy.mockReturnValue(null);
     let arg = controllerResolver.process();
-    expect(aSpy).toHaveBeenCalledWith(arg, controllerProvider, actionName);
+    let rArgs = aSpy.mock.calls[0];
+    expect(aSpy).toHaveBeenCalledWith(rArgs[0], controllerProvider, "action");
+    expect(arg).toBeNull();
   });
 
   test("ControllerResolver.hasMappedAction", () => {
