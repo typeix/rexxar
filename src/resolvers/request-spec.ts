@@ -131,14 +131,13 @@ describe("RequestResolver", () => {
 
     let moduleInjector = ModuleInjector.createAndResolve(MyModule);
     let requestResolver = createResolver(id, data, request, response, moduleInjector);
-
     let resolvedModule = requestResolver.getResolvedModule(resolvedRoute);
     let controllerProvider: IProvider = RequestResolver.getControllerProvider(resolvedModule);
     let provider = verifyProvider(MyController);
     expect(provider).toEqual(controllerProvider);
   });
 
-  /*
+
      test("Should getControllerProvider no route", () => {
 
        @Controller({
@@ -153,220 +152,217 @@ describe("RequestResolver", () => {
 
        @Module({
          name: "root",
-         controllers: [MyController]
+         controllers: [MyController],
+         providers: []
        })
        class MyModule {
        }
 
-       let modules: Array<IModule> = createModule(MyModule);
-       let module: IResolvedModule = {
-         module: getModule(modules),
-         controller: "test",
-         action: "index",
-         resolvedRoute,
-         data
-       };
+       resolvedRoute.route = "test/index";
 
-       assert.throws(() => {
-         RequestResolver.getControllerProvider(module);
-       }, "You must define controller within current route: core/index");
+       expect(() => {
+         let moduleInjector = ModuleInjector.createAndResolve(MyModule);
+         let requestResolver = createResolver(id, data, request, response, moduleInjector);
+         let resolvedModule = requestResolver.getResolvedModule(resolvedRoute);
+         RequestResolver.getControllerProvider(resolvedModule);
+       }).toThrow( /You must define controller within current route: test\/index/g);
      });
 
+  /*
+       test("Should processModule", (done) => {
 
-     test("Should processModule", (done) => {
+         let value = "MY_VALUE";
 
-       let value = "MY_VALUE";
+         @Controller({
+           name: "core"
+         })
+         class MyController {
 
-       @Controller({
-         name: "core"
-       })
-       class MyController {
-
-         @Action("index")
-         actionIndex() {
-           return value;
-         }
-       }
-
-       @Module({
-         name: "root",
-         providers: [Logger, Router],
-         controllers: [MyController]
-       })
-       class MyModule {
-       }
-
-       let modules: Array<IModule> = createModule(MyModule);
-       let module: IResolvedModule = {
-         module: getModule(modules),
-         controller: "core",
-         action: "index",
-         resolvedRoute,
-         data
-       };
-
-       Promise.resolve(routeResolver.processModule(module))
-         .then(resolved => {
-           assert.equal(resolved, value);
-           done();
-         }).catch(done);
-     });
-
-
-     test("Should process GET", (done) => {
-
-       let value = "MY_VALUE";
-
-       @Controller({
-         name: "core"
-       })
-       class MyController {
-
-         @Action("index")
-         actionIndex() {
-           return value;
-         }
-       }
-
-       @Module({
-         name: "root",
-         providers: [Logger, Router],
-         controllers: [MyController]
-       })
-       class MyModule implements IAfterConstruct {
-         afterConstruct(): void {
-           this.router.addRules([{
-             methods: [Methods.GET],
-             url: "/",
-             route: "core/index"
-           }]);
+           @Action("index")
+           actionIndex() {
+             return value;
+           }
          }
 
-         @Inject(Router)
-         private router: Router;
-       }
-
-       request.method = "GET";
-       request.url = "/";
-       request.headers = {};
-
-       let modules: Array<IModule> = createModule(MyModule);
-       let injector = Injector.createAndResolveChild(
-         getModule(modules).injector,
-         RequestResolver,
-         [
-           {provide: "url", useValue: parse("/", true)},
-           {provide: "UUID", useValue: id},
-           {provide: "data", useValue: data},
-           {provide: "contentType", useValue: "text/html"},
-           {provide: "statusCode", useValue: 200},
-           {provide: "request", useValue: request},
-           {provide: "response", useValue: response},
-           {provide: "modules", useValue: modules},
-           EventEmitter
-         ]
-       );
-       let myRouteResolver = injector.get(RequestResolver);
-
-
-       let aSpy = spy(myRouteResolver, "render");
-
-       Promise.resolve(myRouteResolver.process())
-         .then(resolved => {
-           assert.equal(resolved, value);
-           assertSpy.calledWith(aSpy, value);
-           done();
-         }).catch(done);
-     });
-
-
-     test("Should process POST", (done) => {
-
-       let value = "MY_VALUE";
-
-       @Controller({
-         name: "core"
-       })
-       class MyController {
-
-         @Action("index")
-         actionIndex() {
-           return value;
-         }
-       }
-
-       @Module({
-         name: "root",
-         providers: [Logger, Router],
-         controllers: [MyController]
-       })
-       class MyModule implements IAfterConstruct {
-         afterConstruct(): void {
-           this.router.addRules([{
-             methods: [Methods.POST],
-             url: "/",
-             route: "core/index"
-           }]);
+         @Module({
+           name: "root",
+           providers: [Logger, Router],
+           controllers: [MyController]
+         })
+         class MyModule {
          }
 
-         @Inject(Router)
-         private router: Router;
-       }
+         let modules: Array<IModule> = createModule(MyModule);
+         let module: IResolvedModule = {
+           module: getModule(modules),
+           controller: "core",
+           action: "index",
+           resolvedRoute,
+           data
+         };
 
-       request.method = "POST";
-       request.url = "/";
-       request.headers = {};
+         Promise.resolve(routeResolver.processModule(module))
+           .then(resolved => {
+             assert.equal(resolved, value);
+             done();
+           }).catch(done);
+       });
 
-       let modules: Array<IModule> = createModule(MyModule);
-       let injector = Injector.createAndResolveChild(
-         getModule(modules).injector,
-         RequestResolver,
-         [
-           {provide: "url", useValue: parse("/", true)},
-           {provide: "UUID", useValue: id},
-           {provide: "data", useValue: []},
-           {provide: "contentType", useValue: "text/html"},
-           {provide: "statusCode", useValue: 200},
-           {provide: "request", useValue: request},
-           {provide: "response", useValue: response},
-           {provide: "modules", useValue: modules},
-           EventEmitter
-         ]
-       );
-       let myRouteResolver = injector.get(RequestResolver);
 
-       let a = [Buffer.from("a"), Buffer.from("b"), Buffer.from("c")];
+       test("Should process GET", (done) => {
 
-       // simulate async data processing
-       setTimeout(() => {
-         request.emtest("data", a[0]);
-         request.emtest("data", a[1]);
-         request.emtest("data", a[2]);
-         request.emtest("end");
-       }, 0);
+         let value = "MY_VALUE";
 
-       let aSpy = spy(myRouteResolver, "render");
-       let bSpy = spy(myRouteResolver, "processModule");
+         @Controller({
+           name: "core"
+         })
+         class MyController {
 
-       Promise.resolve(myRouteResolver.process())
-         .then(resolved => {
-           let module: IResolvedModule = {
-             module: getModule(modules, "root"),
-             controller: "core",
-             action: "index",
-             resolvedRoute: {
-               method: Methods.POST,
-               params: {},
+           @Action("index")
+           actionIndex() {
+             return value;
+           }
+         }
+
+         @Module({
+           name: "root",
+           providers: [Logger, Router],
+           controllers: [MyController]
+         })
+         class MyModule implements IAfterConstruct {
+           afterConstruct(): void {
+             this.router.addRules([{
+               methods: [Methods.GET],
+               url: "/",
                route: "core/index"
-             },
-             data: a
-           };
-           assert.equal(resolved, value);
-           assertSpy.calledWith(aSpy, value);
-           assertSpy.calledWith(bSpy, module);
-           done();
-         }).catch(done);
-     });
-   */
+             }]);
+           }
+
+           @Inject(Router)
+           private router: Router;
+         }
+
+         request.method = "GET";
+         request.url = "/";
+         request.headers = {};
+
+         let modules: Array<IModule> = createModule(MyModule);
+         let injector = Injector.createAndResolveChild(
+           getModule(modules).injector,
+           RequestResolver,
+           [
+             {provide: "url", useValue: parse("/", true)},
+             {provide: "UUID", useValue: id},
+             {provide: "data", useValue: data},
+             {provide: "contentType", useValue: "text/html"},
+             {provide: "statusCode", useValue: 200},
+             {provide: "request", useValue: request},
+             {provide: "response", useValue: response},
+             {provide: "modules", useValue: modules},
+             EventEmitter
+           ]
+         );
+         let myRouteResolver = injector.get(RequestResolver);
+
+
+         let aSpy = spy(myRouteResolver, "render");
+
+         Promise.resolve(myRouteResolver.process())
+           .then(resolved => {
+             assert.equal(resolved, value);
+             assertSpy.calledWith(aSpy, value);
+             done();
+           }).catch(done);
+       });
+
+
+       test("Should process POST", (done) => {
+
+         let value = "MY_VALUE";
+
+         @Controller({
+           name: "core"
+         })
+         class MyController {
+
+           @Action("index")
+           actionIndex() {
+             return value;
+           }
+         }
+
+         @Module({
+           name: "root",
+           providers: [Logger, Router],
+           controllers: [MyController]
+         })
+         class MyModule implements IAfterConstruct {
+           afterConstruct(): void {
+             this.router.addRules([{
+               methods: [Methods.POST],
+               url: "/",
+               route: "core/index"
+             }]);
+           }
+
+           @Inject(Router)
+           private router: Router;
+         }
+
+         request.method = "POST";
+         request.url = "/";
+         request.headers = {};
+
+         let modules: Array<IModule> = createModule(MyModule);
+         let injector = Injector.createAndResolveChild(
+           getModule(modules).injector,
+           RequestResolver,
+           [
+             {provide: "url", useValue: parse("/", true)},
+             {provide: "UUID", useValue: id},
+             {provide: "data", useValue: []},
+             {provide: "contentType", useValue: "text/html"},
+             {provide: "statusCode", useValue: 200},
+             {provide: "request", useValue: request},
+             {provide: "response", useValue: response},
+             {provide: "modules", useValue: modules},
+             EventEmitter
+           ]
+         );
+         let myRouteResolver = injector.get(RequestResolver);
+
+         let a = [Buffer.from("a"), Buffer.from("b"), Buffer.from("c")];
+
+         // simulate async data processing
+         setTimeout(() => {
+           request.emtest("data", a[0]);
+           request.emtest("data", a[1]);
+           request.emtest("data", a[2]);
+           request.emtest("end");
+         }, 0);
+
+         let aSpy = spy(myRouteResolver, "render");
+         let bSpy = spy(myRouteResolver, "processModule");
+
+         Promise.resolve(myRouteResolver.process())
+           .then(resolved => {
+             let module: IResolvedModule = {
+               module: getModule(modules, "root"),
+               controller: "core",
+               action: "index",
+               resolvedRoute: {
+                 method: Methods.POST,
+                 params: {},
+                 route: "core/index"
+               },
+               data: a
+             };
+             assert.equal(resolved, value);
+             assertSpy.calledWith(aSpy, value);
+             assertSpy.calledWith(bSpy, module);
+             done();
+           }).catch(done);
+       });
+     */
 
 });
