@@ -1,5 +1,5 @@
 import {defineMetadata, IMetadataValue} from "@typeix/di";
-import {isObject} from "@typeix/utils";
+import {isObject, isUndefined} from "@typeix/utils";
 
 /**
  * Action mapping
@@ -36,9 +36,7 @@ let map = (type, value?: any): MethodDecorator => {
  * @description
  * Before each action
  */
-export let BeforeEach = (): MethodDecorator => {
-  return map("BeforeEach", null);
-};
+export let BeforeEach: MethodDecorator = map("BeforeEach", null);
 
 /**
  * Action decorator
@@ -49,9 +47,7 @@ export let BeforeEach = (): MethodDecorator => {
  * @description
  * After each action
  */
-export let AfterEach = (): MethodDecorator => {
-  return map("AfterEach", null);
-};
+export let AfterEach: MethodDecorator = map("AfterEach", null);
 /**
  * Action decorator
  * @decorator
