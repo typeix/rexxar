@@ -192,7 +192,7 @@ export class RequestResolver implements IAfterConstruct {
    */
   static getControllerProvider(resolvedModule: IResolvedModule): IProvider {
 
-    let provider: IProvider = verifyProvider(resolvedModule.module);
+    let provider: IProvider = verifyProvider(resolvedModule.module.token);
     let moduleMetadata: IModuleMetadata = getMetadataArgs(provider.provide, "#typeix:@Module");
 
     let controllerProvider: IProvider = moduleMetadata.controllers
