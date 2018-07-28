@@ -10,7 +10,7 @@ import {
   Injector,
   IProvider,
   verifyProviders,
-  IMetadata, getMetadata
+  IMetadata
 } from "@typeix/di";
 import {
   isArray,
@@ -59,9 +59,22 @@ function getAllMetadata(token: Object, inherited = true): IMetadata[] {
  * @param {string} decorator
  * @returns {IMetadata | undefined}
  */
-function getMetadataByDecorator(token: Object, decorator: string): IMetadata[] {
+function getAllMetadataByDecorator(token: Object, decorator: string): IMetadata[] {
   return getAllMetadata(token).filter(
     (item: IMetadata) => item.metadataKey === getDecorator(decorator)
+  );
+}
+/**
+ * Get metadata args
+ * @param {Object} token
+ * @param {string} decorator
+ * @param {string} targetKey
+ * @returns {any}
+ */
+function getMetadata(token: Object, decorator: string, targetKey?: string): IMetadata {
+  return  getAllMetadata(token).find(
+    (item: IMetadata) =>
+      item.metadataKey === getDecorator(decorator) && item.targetKey === targetKey
   );
 }
 
@@ -72,13 +85,24 @@ function getMetadataByDecorator(token: Object, decorator: string): IMetadata[] {
  * @param {string} targetKey
  * @returns {any}
  */
-function getMetadataArgs(token: Object, decorator: string, targetKey?: string): any {
-  let metadata = getAllMetadata(token).find(
-    (item: IMetadata) =>
-      item.metadataKey === getDecorator(decorator) && item.targetKey === targetKey
-  );
+function getMetadataValue(token: Object, decorator: string, targetKey?: string): IMetadataValue {
+  let metadata = getMetadata(token, decorator, targetKey);
   if (isDefined(metadata)) {
-    return metadata.metadataValue.args;
+    return metadata.metadataValue;
+  }
+  return null;
+}
+/**
+ * Get metadata args
+ * @param {Object} token
+ * @param {string} decorator
+ * @param {string} targetKey
+ * @returns {any}
+ */
+function getMetadataArgs(token: Object, decorator: string, targetKey?: string): any {
+  let metadata: IMetadataValue = getMetadataValue(token, decorator, targetKey);
+  if (isDefined(metadata)) {
+    return metadata.args;
   }
   return null;
 }
@@ -333,7 +357,7 @@ export class ControllerResolver {
    */
   hasMappedAction(controllerProvider: IProvider, actionName: String, name: string = "Action"): boolean {
     return isDefined(
-      getMetadataByDecorator(controllerProvider.provide.prototype, name)
+      getAllMetadataByDecorator(controllerProvider.provide.prototype, name)
         .find(item => item.metadataValue.args.value === actionName)
     );
   }
@@ -348,7 +372,7 @@ export class ControllerResolver {
    */
   getMappedAction(controllerProvider: IProvider, actionName: String, name: string = "Action"): IMetadata {
     // get mappings from controller
-    let mappedAction = getMetadataByDecorator(controllerProvider.provide.prototype, name)
+    let mappedAction = getAllMetadataByDecorator(controllerProvider.provide.prototype, name)
       .find(item => item.metadataValue.args.value === actionName);
     // check if action is present
     if (!isDefined(mappedAction)) {
@@ -374,12 +398,12 @@ export class ControllerResolver {
    * @description
    * Get param decorator by mapped action
    */
-  getDecoratorByMappedAction(controllerProvider: IProvider, mappedAction: IMetadata, paramName: string): any {
+  getDecoratorByMappedAction(controllerProvider: IProvider, mappedAction: IMetadata, paramName: string): IMetadataValue {
     // get mappings from controller
-    return getMetadataArgs(
+    return getMetadataValue(
       controllerProvider.provide.prototype,
       paramName,
-      mappedAction.metadataValue.args.value
+      mappedAction.targetKey
     );
   }
 
