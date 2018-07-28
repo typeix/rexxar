@@ -72,7 +72,7 @@ function getMetadataByDecorator(token: Object, decorator: string): IMetadata[] {
  * @param {string} targetKey
  * @returns {any}
  */
-function getMetadataArgs(token: Object, decorator: string, targetKey?: string) {
+function getMetadataArgs(token: Object, decorator: string, targetKey?: string): any {
   let metadata = getAllMetadata(token).find(
     (item: IMetadata) =>
       item.metadataKey === getDecorator(decorator) && item.targetKey === targetKey
@@ -393,7 +393,11 @@ export class ControllerResolver {
    */
   getMappedActionArguments(controllerProvider: IProvider, mappedAction: IMetadata): Array<any> {
     // get mappings from controller
-    return getMetadataArgs(controllerProvider.provide.prototyp, TX_PARAMS, mappedAction.targetKey);
+    return getMetadataArgs(
+      controllerProvider.provide.prototype,
+      TX_PARAMS,
+      mappedAction.targetKey
+    );
   }
 
 

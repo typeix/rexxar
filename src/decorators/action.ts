@@ -7,7 +7,7 @@ import {isObject} from "@typeix/utils";
  * @param value
  * @returns {(Class: Function, key: (string | symbol), descriptor: PropertyDescriptor) => any}
  */
-let map = (type, value?: any) => {
+let map = (type, value?: any): MethodDecorator => {
   return (Class: Function, key: string | symbol, descriptor: PropertyDescriptor): any => {
     let METADATA_KEY = "typeix:rexxar:@" + type;
     let metadata: IMetadataValue = {

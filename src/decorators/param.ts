@@ -27,7 +27,7 @@ export let PARAM_METADATA_KEY = "typeix:rexxar:@Param";
  *     }
  * }
  */
-export let Param: ParameterDecorator = (value: string) => {
+export let Param = (value: string): ParameterDecorator => {
   return (Class: Object, key: string | symbol, paramIndex: number): void => {
     let metadata: IMetadataValue = {
       args: {

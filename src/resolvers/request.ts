@@ -1,11 +1,12 @@
-import {IAfterConstruct, Inject, Injectable, Injector, IProvider} from "@typeix/di";
+import {IAfterConstruct, Inject, Injectable, Injector, IProvider, verifyProvider} from "@typeix/di";
 import {isDefined, isFalsy, isString, isTruthy, Logger, ServerError, StatusCodes} from "@typeix/utils";
 import {IResolvedRoute, RestMethods, Router} from "@typeix/router";
-import {IncomingMessage, ServerResponse} from "http";
+import {IncomingMessage, OutgoingHttpHeaders, ServerResponse} from "http";
 import {EventEmitter} from "events";
 import {Url} from "url";
 import {IRedirect} from "../interfaces";
 import {ControllerResolver} from "./controller";
+import {ModuleInjector} from "@typeix/modules";
 
 
 export const MODULE_KEY = "__module__";
@@ -108,8 +109,8 @@ export class RequestResolver implements IAfterConstruct {
    * @description
    * Parsed request url
    */
-  @Inject("modules")
-  private modules: Array<IModule>;
+  @Inject(ModuleInjector)
+  private moduleInjector: ModuleInjector;
 
   /**
    * @param {Number} statusCode
@@ -156,7 +157,7 @@ export class RequestResolver implements IAfterConstruct {
     let moduleMetadata: IModuleMetadata = Metadata.getComponentConfig(provider.provide);
 
     let controllerProvider: IProvider = moduleMetadata.controllers
-      .map(item => Metadata.verifyProvider(item))
+      .map(item => verifyProvider(item))
       .find((Class: IProvider) => {
         let metadata: IControllerMetadata = Metadata.getComponentConfig(Class.provide);
         return metadata.name === resolvedModule.controller;
@@ -363,9 +364,9 @@ export class RequestResolver implements IAfterConstruct {
    */
   getResolvedModule(resolvedRoute: IResolvedRoute): IResolvedModule {
     let [module, controller, action] = resolvedRoute.route.split("/");
-    let resolvedModule: IModule = !isPresent(action) ? getModule(this.modules) : getModule(this.modules, module);
+    let resolvedModule: IModule = !isDefined(action) ? getModule(this.modules) : getModule(this.modules, module);
     if (isFalsy(resolvedModule)) {
-      throw new HttpError(
+      throw new ServerError(
         500,
         "Module with route " + resolvedRoute.route + " is not registered in system," +
         " please check your route configuration!",
@@ -373,8 +374,8 @@ export class RequestResolver implements IAfterConstruct {
       );
     }
     return {
-      action: !isPresent(action) ? controller : action,
-      controller: !isPresent(action) ? module : controller,
+      action: !isDefined(action) ? controller : action,
+      controller: !isDefined(action) ? module : controller,
       data: this.data,
       module: resolvedModule,
       resolvedRoute
@@ -405,7 +406,7 @@ export class RequestResolver implements IAfterConstruct {
         /**
          * Copy query params to params if thy are not defined in path
          */
-        if (isPresent(this.url.query)) {
+        if (isDefined(this.url.query)) {
           Object.keys(this.url.query).forEach(key => {
             if (!resolvedRoute.params.hasOwnProperty(key)) {
               resolvedRoute.params[key] = this.url.query[key];
@@ -415,7 +416,7 @@ export class RequestResolver implements IAfterConstruct {
         /**
          * ON POST, PATCH, PUT process body
          */
-        if ([Methods.POST, Methods.PATCH, Methods.PUT].indexOf(resolvedRoute.method) > -1) {
+        if ([RestMethods.POST, RestMethods.PATCH, RestMethods.PUT].indexOf(resolvedRoute.method) > -1) {
           this.request.on("data", item => this.data.push(<Buffer> item));
           return new Promise((resolve, reject) => {
             this.request.on("error", reject.bind(this));

@@ -13,7 +13,7 @@ export let PRODUCES_METADATA_KEY = "typeix:rexxar:@Produces";
  * @description
  * Produces content type
  */
-export let Produces = (value: string) => {
+export let Produces = (value: string): MethodDecorator => {
   return (Class: Function, key: string | symbol, descriptor: PropertyDescriptor): any => {
     let metadata: IMetadataValue = {
       args: {
