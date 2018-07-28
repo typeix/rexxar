@@ -64,6 +64,19 @@ function getAllMetadataByDecorator(token: Object, decorator: string): IMetadata[
     (item: IMetadata) => item.metadataKey === getDecorator(decorator)
   );
 }
+
+/**
+ * Get metadata args
+ * @param {Object} token
+ * @param {string} targetKey
+ * @returns {any}
+ */
+function getMetadataByTargetKey(token: Object, targetKey: string): IMetadata[] {
+  return getAllMetadata(token).filter(
+    (item: IMetadata) => item.targetKey === targetKey
+  );
+}
+
 /**
  * Get metadata args
  * @param {Object} token
@@ -72,7 +85,7 @@ function getAllMetadataByDecorator(token: Object, decorator: string): IMetadata[
  * @returns {any}
  */
 function getMetadata(token: Object, decorator: string, targetKey?: string): IMetadata {
-  return  getAllMetadata(token).find(
+  return getAllMetadata(token).find(
     (item: IMetadata) =>
       item.metadataKey === getDecorator(decorator) && item.targetKey === targetKey
   );
@@ -92,6 +105,7 @@ function getMetadataValue(token: Object, decorator: string, targetKey?: string):
   }
   return null;
 }
+
 /**
  * Get metadata args
  * @param {Object} token
@@ -399,7 +413,7 @@ export class ControllerResolver {
    * Get param decorator by mapped action
    */
   getDecoratorByMappedAction(controllerProvider: IProvider, mappedAction: IMetadata, paramName: string): IMetadataValue {
-    // get mappings from controller
+
     return getMetadataValue(
       controllerProvider.provide.prototype,
       paramName,
@@ -415,13 +429,28 @@ export class ControllerResolver {
    * @description
    * Get list of action arguments
    */
-  getMappedActionArguments(controllerProvider: IProvider, mappedAction: IMetadata): Array<any> {
+  getMappedActionArguments(controllerProvider: IProvider, mappedAction: IMetadata): Array<IMetadataValue> {
     // get mappings from controller
-    return getMetadataArgs(
+    let metadataList = getMetadataByTargetKey(
       controllerProvider.provide.prototype,
-      TX_PARAMS,
       mappedAction.targetKey
     );
+    let paramTypes: Array<any> = metadataList.find(item => item.metadataKey == getDecorator(TX_PARAMS)).metadataValue;
+    return paramTypes.map((item, index) => {
+      let paramByIndex = metadataList.find(cItem => cItem.metadataValue.paramIndex === index);
+      if (isDefined(paramByIndex)) {
+        return paramByIndex.metadataValue;
+      }
+      return {
+        name: "typeix:@Inject",
+        key: mappedAction.targetKey,
+        args: {
+          isMutable: false,
+          value: item
+        },
+        paramIndex: index
+      }
+    });
   }
 
 
@@ -448,7 +477,7 @@ export class ControllerResolver {
     }
     // resolve action params
     let actionParams = [];
-    let params: Array<any> = this.getMappedActionArguments(controllerProvider, mappedAction);
+    let params: Array<IMetadataValue> = this.getMappedActionArguments(controllerProvider, mappedAction);
 
     if (isDefined(params)) {
       // make sure params are sorted correctly :)
@@ -462,21 +491,21 @@ export class ControllerResolver {
       });
       // push action params
       params.forEach(param => {
-        switch (param.type) {
-          case "Param":
-            if (isDefined(this.resolvedRoute.params) && this.resolvedRoute.params.hasOwnProperty(param.value)) {
-              actionParams.push(this.resolvedRoute.params[param.value]);
+        switch (param.name) {
+          case "typeix:rexxar:@Param":
+            if (isDefined(this.resolvedRoute.params) && this.resolvedRoute.params.hasOwnProperty(param.args.value)) {
+              actionParams.push(this.resolvedRoute.params[param.args.value]);
             } else {
               actionParams.push(null);
             }
             break;
-          case "Chain":
+          case "typeix:rexxar:@Chain":
             actionParams.push(injector.get(CHAIN_KEY));
             break;
-          case "Inject":
-            actionParams.push(injector.get(param.value));
+          case "typeix:@Inject":
+            actionParams.push(injector.get(param.args.value));
             break;
-          case "ErrorMessage":
+          case "typeix:rexxar:@ErrorMessage":
             actionParams.push(injector.get(ERROR_KEY));
             break;
         }
