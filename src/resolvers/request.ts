@@ -4,9 +4,12 @@ import {IResolvedRoute, RestMethods, Router} from "@typeix/router";
 import {IncomingMessage, OutgoingHttpHeaders, ServerResponse} from "http";
 import {EventEmitter} from "events";
 import {Url} from "url";
-import {IRedirect} from "../interfaces";
+import {IControllerMetadata, IRedirect} from "../interfaces";
 import {ControllerResolver} from "./controller";
 import {ModuleInjector} from "@typeix/modules";
+import {IModuleMetadata} from "..";
+import {getMetadataArgs} from "../helpers/metadata";
+import {BOOTSTRAP_MODULE} from "../decorators/module";
 
 
 export const MODULE_KEY = "__module__";
@@ -26,6 +29,42 @@ export enum RenderType {
   DATA_HANDLER,
   CUSTOM_ERROR_HANDLER,
   DEFAULT_ERROR_HANDLER
+}
+
+
+/**
+ * @since 1.0.0
+ * @interface
+ * @name IResolvedModule
+ * @param {Object} module
+ * @param {Array<Buffer>} data
+ * @param {String} controller
+ * @param {String} action
+ *
+ * @description
+ * Resolved module data from resolved route
+ */
+export interface IResolvedModule {
+  injector: Injector;
+  module: IModule,
+  data?: Array<Buffer>;
+  resolvedRoute: IResolvedRoute;
+  controller: string;
+  action: string;
+}
+/**
+ * @since 1.0.0
+ * @interface
+ * @name IModule
+ * @param {Object} token
+ * @param {IModuleMetadata} metadata
+ *
+ * @description
+ * Module metadata
+ */
+export interface IModule {
+  token: any;
+  metadata: IModuleMetadata;
 }
 
 /**
@@ -153,13 +192,13 @@ export class RequestResolver implements IAfterConstruct {
    */
   static getControllerProvider(resolvedModule: IResolvedModule): IProvider {
 
-    let provider: IProvider = Metadata.verifyProvider(resolvedModule.module.provider);
-    let moduleMetadata: IModuleMetadata = Metadata.getComponentConfig(provider.provide);
+    let provider: IProvider = verifyProvider(resolvedModule.module);
+    let moduleMetadata: IModuleMetadata = getMetadataArgs(provider.provide, "#typeix:@Module");
 
     let controllerProvider: IProvider = moduleMetadata.controllers
       .map(item => verifyProvider(item))
       .find((Class: IProvider) => {
-        let metadata: IControllerMetadata = Metadata.getComponentConfig(Class.provide);
+        let metadata: IControllerMetadata = getMetadataArgs(Class.provide, "Controller");
         return metadata.name === resolvedModule.controller;
       });
     if (!isDefined(controllerProvider)) {
@@ -227,7 +266,7 @@ export class RequestResolver implements IAfterConstruct {
 
       if (this.injector.has(MODULE_KEY)) {
         let iResolvedModule: IResolvedModule = this.injector.get(MODULE_KEY);
-        route = this.router.getError(iResolvedModule.module.name);
+        route = this.router.getError(iResolvedModule.module.metadata.name);
       } else {
         route = this.router.getError();
       }
@@ -335,7 +374,7 @@ export class RequestResolver implements IAfterConstruct {
      * Create and resolve
      */
     let childInjector = Injector.createAndResolveChild(
-      resolvedModule.module.injector,
+      resolvedModule.injector,
       ControllerResolver,
       providers
     );
@@ -364,8 +403,8 @@ export class RequestResolver implements IAfterConstruct {
    */
   getResolvedModule(resolvedRoute: IResolvedRoute): IResolvedModule {
     let [module, controller, action] = resolvedRoute.route.split("/");
-    let resolvedModule: IModule = !isDefined(action) ? getModule(this.modules) : getModule(this.modules, module);
-    if (isFalsy(resolvedModule)) {
+    let iModule: IModule = !isDefined(action) ? this.getModule(BOOTSTRAP_MODULE) : this.getModule(module);
+    if (isFalsy(iModule)) {
       throw new ServerError(
         500,
         "Module with route " + resolvedRoute.route + " is not registered in system," +
@@ -377,7 +416,8 @@ export class RequestResolver implements IAfterConstruct {
       action: !isDefined(action) ? controller : action,
       controller: !isDefined(action) ? module : controller,
       data: this.data,
-      module: resolvedModule,
+      module: iModule,
+      injector: this.moduleInjector.getInjector(iModule.token),
       resolvedRoute
     };
   }
@@ -435,5 +475,15 @@ export class RequestResolver implements IAfterConstruct {
       .then(data => this.render(data, isFalsy(this.redirectTo) ? RenderType.DATA_HANDLER : RenderType.REDIRECT))
       .catch(data => this.render(data, RenderType.CUSTOM_ERROR_HANDLER))
       .catch(data => this.render(data, RenderType.DEFAULT_ERROR_HANDLER));
+  }
+
+  /**
+   * Get Module
+   * @param {string} name
+   * @returns {IModule}
+   */
+  private getModule(name: string): IModule {
+    let modules = <Array<{ token: any, metadata: any }>> this.moduleInjector.getAllMetadata();
+    return <IModule> modules.find(item => item.metadata.name === name);
   }
 }
