@@ -3,8 +3,9 @@ import {ControllerResolver, Request} from "./controller";
 import {Logger, uuid} from "@typeix/utils";
 import {EventEmitter} from "events";
 import {IMetadata, Inject, Injector, verifyProvider, verifyProviders} from "@typeix/di";
-import {Action, Before, Chain, Controller, ErrorMessage, Filter, IFilter, Param, Produces} from "..";
+import {Action, After, Before, AfterEach, BeforeEach, Chain, Controller, ErrorMessage, Filter, IFilter, Param, Produces} from "..";
 import {getMetadataArgs} from "../helpers/metadata";
+import {fakeControllerActionCall} from "../helpers/mocks";
 
 
 describe("ControllerResolver", () => {
@@ -439,60 +440,60 @@ describe("ControllerResolver", () => {
       .catch(done);
 
   });
+
+  test("ControllerResolver.processController action chain no filter", (done) => {
+
+
+    @Controller({
+      name: "root"
+    })
+    class A {
+
+      @BeforeEach
+      actionBeforeEach(@Chain chain): any {
+        return "beforeEach <- " + chain;
+      }
+
+      @Before("index")
+      actionBefore(@Chain chain): any {
+        return "before <- " + chain;
+      }
+
+      @Action("index")
+      actionIndex(@Chain chain): any {
+        return "action <- " + chain;
+      }
+
+      @After("index")
+      actionAfter(@Chain chain): any {
+        return "after <- " + chain;
+      }
+
+      @AfterEach
+      actionAfterEach(@Chain chain): any {
+        return "afterEach <- " + chain;
+      }
+
+    }
+
+    let injector = Injector.createAndResolve(Logger, []);
+    let result = fakeControllerActionCall(
+      injector,
+      verifyProvider(A),
+      "index"
+    );
+    expect(result).toBeInstanceOf(Promise);
+
+    result.then(data => {
+      expect(data).not.toBeNull();
+      expect(data).toBe("afterEach <- after <- action <- before <- beforeEach <- null");
+      done();
+    })
+      .catch(done);
+
+  });
+
   /*
-         test("ControllerResolver.processController action chain no filter", (done) => {
-
-
-           @Controller({
-             name: "root"
-           })
-           class A {
-
-             @BeforeEach
-             actionBeforeEach(@Chain chain): any {
-               return "beforeEach <- " + chain;
-             }
-
-             @Before("index")
-             actionBefore(@Chain chain): any {
-               return "before <- " + chain;
-             }
-
-             @Action("index")
-             actionIndex(@Chain chain): any {
-               return "action <- " + chain;
-             }
-
-             @After("index")
-             actionAfter(@Chain chain): any {
-               return "after <- " + chain;
-             }
-
-             @AfterEach
-             actionAfterEach(@Chain chain): any {
-               return "afterEach <- " + chain;
-             }
-
-           }
-
-           let injector = Injector.createAndResolve(Logger, []);
-           let result = fakeControllerActionCall(
-             injector,
-             Metadata.verifyProvider(A),
-             "index"
-           );
-           assert.instanceOf(result, Promise);
-
-           result.then(data => {
-             assert.isNotNull(data);
-             assert.deepEqual(data, "afterEach <- after <- action <- before <- beforeEach <- null");
-             done();
-           })
-             .catch(done);
-
-         });
-
-
            test("ControllerResolver.processController with filters", (done) => {
 
              @Filter(10)
