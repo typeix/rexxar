@@ -52,6 +52,7 @@ export interface IResolvedModule {
   controller: string;
   action: string;
 }
+
 /**
  * @since 1.0.0
  * @interface
@@ -482,7 +483,7 @@ export class RequestResolver implements IAfterConstruct {
    * @param {string} name
    * @returns {IModule}
    */
-  private getModule(name: string): IModule {
+  getModule(name: string): IModule {
     let modules = <Array<{ token: any, metadata: any }>> this.moduleInjector.getAllMetadata();
     return <IModule> modules.find(item => item.metadata.name === name);
   }
