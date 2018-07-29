@@ -1,9 +1,9 @@
 import {IAfterConstruct, Inject, Injectable, Injector, IProvider, verifyProvider} from "@typeix/di";
-import {isDefined, isFalsy, isString, isTruthy, Logger, ServerError, StatusCodes} from "@typeix/utils";
+import {isDefined, isFalsy, isString, isTruthy, Logger, ServerError, StatusCodes, uuid} from "@typeix/utils";
 import {IResolvedRoute, RestMethods, Router} from "@typeix/router";
 import {IncomingMessage, OutgoingHttpHeaders, ServerResponse} from "http";
 import {EventEmitter} from "events";
-import {Url} from "url";
+import {parse, Url} from "url";
 import {IControllerMetadata, IRedirect} from "../interfaces";
 import {ControllerResolver} from "./controller";
 import {ModuleInjector} from "@typeix/modules";
@@ -66,6 +66,68 @@ export interface IResolvedModule {
 export interface IModule {
   token: any;
   metadata: IModuleMetadata;
+}
+
+/**
+ * @since 1.0.0
+ * @function
+ * @name fireRequest
+ * @param {ModuleInjector} moduleInjector module injector
+ * @param {IncomingMessage} request event emitter
+ * @param {ServerResponse} response event emitter
+ * @return {string|Buffer} data from controller
+ *
+ * @description
+ * Use fireRequest to process request itself, this function is used by http/https server or
+ * You can fire fake request
+ */
+export function fireRequest(moduleInjector: ModuleInjector,
+                            request: IncomingMessage,
+                            response: ServerResponse): Promise<string | Buffer> {
+  let moduleList = <Array<{ token: any, metadata: any }>> moduleInjector.getAllMetadata();
+  let rootModuleMetadata = moduleList.find(item => item.metadata.name === BOOTSTRAP_MODULE);
+  if (!isDefined(rootModuleMetadata)) {
+    return Promise.reject(new ServerError(500, "@RootModule is not defined"))
+  }
+  let rootInjector = moduleInjector.getInjector(rootModuleMetadata.token);
+  let logger = rootInjector.get(Logger);
+  /**
+   * Create RequestResolver injector
+   */
+  let routeResolverInjector = Injector.createAndResolveChild(
+    rootInjector,
+    RequestResolver,
+    [
+      {provide: "url", useValue: parse(request.url, true)},
+      {provide: "UUID", useValue: uuid()},
+      {provide: "data", useValue: []},
+      {provide: "contentType", useValue: "text/html"},
+      {provide: "statusCode", useValue: StatusCodes.OK},
+      {provide: "request", useValue: request},
+      {provide: "response", useValue: response},
+      {provide: ModuleInjector, useValue: moduleInjector},
+      EventEmitter
+    ]
+  );
+  /**
+   * Get RequestResolver instance
+   */
+  let rRouteResolver: RequestResolver = routeResolverInjector.get(RequestResolver);
+
+  /**
+   * On finish destroy injector
+   */
+  response.on("finish", () => routeResolverInjector.destroy());
+
+  return rRouteResolver
+    .process()
+    .catch(error =>
+      logger.error("ControllerResolver.error", {
+        stack: error.stack,
+        url: request.url,
+        error
+      })
+    );
 }
 
 /**
