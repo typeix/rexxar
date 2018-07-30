@@ -354,7 +354,7 @@ export class ControllerResolver {
     );
     let paramTypes: Array<any> = metadataList.find(item => item.metadataKey == getDecorator(TX_PARAMS)).metadataValue;
     return paramTypes.map((item, index) => {
-      let paramByIndex = metadataList.find(cItem => cItem.metadataValue.paramIndex === index);
+      let paramByIndex = metadataList.find(cItem => isDefined(cItem.metadataValue) ? cItem.metadataValue.paramIndex === index : false);
       if (isDefined(paramByIndex)) {
         return paramByIndex.metadataValue;
       }

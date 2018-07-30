@@ -6,10 +6,11 @@ import {isObject, Logger, ServerError, uuid} from "@typeix/utils";
 import {Inject, Injector, IProvider, verifyProvider} from "@typeix/di";
 import {ModuleInjector} from "@typeix/modules";
 import {ControllerResolver} from "../resolvers/controller";
-import {ERROR_KEY} from "../resolvers/request";
+import {ERROR_KEY, fireRequest} from "../resolvers/request";
 import {IResolvedRoute, RestMethods} from "@typeix/router";
 import {getMetadataArgs} from "./metadata";
 import {IControllerMetadata} from "../interfaces";
+import {IModuleMetadata} from "..";
 
 
 export interface IFakeServerConfig {
@@ -27,21 +28,13 @@ export interface IFakeServerConfig {
  * Use fakeHttpServer for testing only
  */
 
-/* @Todo Update
 export function fakeHttpServer(Class: Function, config?: IFakeServerConfig): FakeServerApi {
-
-  let metadata: IModuleMetadata = Metadata.getComponentConfig(Class);
-  // override bootstrap module
-  metadata.name = BOOTSTRAP_MODULE;
-  // set module config
-  Metadata.setComponentConfig(Class, metadata);
-  let modules: Array<IModule> = createModule(Class);
+  let moduleInjector = ModuleInjector.createAndResolve(Class);
   let fakeServerInjector = Injector.createAndResolve(FakeServerApi, [
-    {provide: "modules", useValue: modules}
+    {provide: ModuleInjector, useValue: moduleInjector}
   ]);
   return fakeServerInjector.get(FakeServerApi);
 }
-*/
 /**
  * @since 1.0.0
  * @function
@@ -152,11 +145,11 @@ export class FakeServerApi {
   /**
    * @since 1.0.0
    * @function
-   * @name FakeServerApi#getModules
+   * @name FakeServerApi#getModuleInjector
    * @description
    * Get initialized modules
    */
-  getModules(): ModuleInjector {
+  getModuleInjector(): ModuleInjector {
     return this.moduleInjector;
   }
 
@@ -319,19 +312,12 @@ export class FakeServerApi {
    * Fire request
    */
   private request(request: FakeIncomingMessage, response: FakeServerResponse): Promise<FakeResponseApi> {
-    /* @TODO update
-    return fireRequest(this.getModules(), request, response).then(data => {
+    return fireRequest(this.getModuleInjector(), request, response).then(data => {
       return {
         getBody: () => response.getBody(),
         getHeaders: () => response.getHeaders(),
         getStatusCode: () => response.statusCode
       };
-    });
-    */
-    return Promise.resolve({
-      getBody: () => response.getBody(),
-      getHeaders: () => response.getHeaders(),
-      getStatusCode: () => response.statusCode
     });
   }
 }
