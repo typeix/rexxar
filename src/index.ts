@@ -2,6 +2,7 @@ export {IFilter, IConnection} from "./interfaces";
 
 export {
   Module,
+  RootModule,
   IModuleMetadata,
   Controller,
   IControllerMetadata,
@@ -16,12 +17,12 @@ export {
   Param,
   Produces,
   Provider
-} from "./decorators";
+} from "./decorators/index";
 
 export {
   httpServer,
   httpsServer
-} from "./servers";
+} from "./servers/index";
 
 export {
   IFakeServerConfig,
@@ -29,7 +30,11 @@ export {
   fakeControllerActionCall,
   FakeResponseApi,
   FakeServerApi
-} from "./helpers";
+} from "./helpers/index";
+
+export {
+  Request
+} from "./resolvers/index"
 
 export * from "@typeix/router";
 export * from "@typeix/di";
