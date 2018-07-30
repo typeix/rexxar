@@ -1,4 +1,4 @@
-import {defineMetadata, IMetadataValue, IProvider, verifyProviders} from "@typeix/di";
+import {defineMetadata, IMetadataValue, UProvider, verifyProviders} from "@typeix/di";
 
 /**
  * metadata key
@@ -26,7 +26,7 @@ export const PROVIDER_METADATA_KEY = "typeix:rexxar:@Provider";
  *    }
  * }
  */
-export let Provider = (config: Array<IProvider|Function>): ClassDecorator => {
+export let Provider = (config: Array<UProvider>): ClassDecorator => {
   return (Class: Function): any => {
     let metadata: IMetadataValue = {
       args: verifyProviders(config),
