@@ -1,5 +1,5 @@
-import {Filter} from "./decorators/filter";
 import {IFilter} from "./interfaces";
+import {Filter} from "./decorators";
 
 describe("@Decorators", () => {
 

@@ -1,12 +1,26 @@
-import {IControllerMetadata} from "../interfaces";
 import {isArray, isClass} from "@typeix/utils";
-import {defineMetadata, IMetadataValue, verifyProviders} from "@typeix/di";
+import {defineMetadata, IMetadataValue, IProvider, verifyProviders} from "@typeix/di";
+import {TFilter} from "../interfaces";
 
 /**
  * ControllerResolver metadata key
  * @type {string}
  */
 export const CONTROLLER_METADATA_KEY = "typeix:rexxar:@Controller";
+
+/**
+ * @since 1.0.0
+ * @interface
+ * @name IControllerMetadata
+ *
+ * @description
+ * ControllerResolver metadata
+ */
+export interface IControllerMetadata {
+  name: string;
+  filters?: Array<TFilter>;
+  providers?: Array<IProvider|Function>;
+}
 /**
  * ControllerResolver
  * @decorator

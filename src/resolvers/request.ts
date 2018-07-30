@@ -4,10 +4,10 @@ import {IResolvedRoute, RestMethods, Router} from "@typeix/router";
 import {IncomingMessage, OutgoingHttpHeaders, ServerResponse} from "http";
 import {EventEmitter} from "events";
 import {parse, Url} from "url";
-import {IControllerMetadata, IRedirect} from "../interfaces";
+import {IRedirect} from "../interfaces";
 import {ControllerResolver} from "./controller";
 import {ModuleInjector} from "@typeix/modules";
-import {IModuleMetadata} from "..";
+import {IControllerMetadata, IModuleMetadata} from "..";
 import {getMetadataArgs} from "../helpers/metadata";
 import {BOOTSTRAP_MODULE} from "../decorators/module";
 

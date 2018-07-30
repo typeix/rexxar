@@ -1,5 +1,5 @@
 import {defineMetadata, IMetadataValue} from "@typeix/di";
-import {isObject, isUndefined} from "@typeix/utils";
+import {isObject} from "@typeix/utils";
 
 /**
  * Action mapping

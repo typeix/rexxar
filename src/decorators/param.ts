@@ -1,5 +1,4 @@
 import {defineMetadata, IMetadataValue} from "@typeix/di";
-import {isDefined} from "@typeix/utils";
 
 export let PARAM_METADATA_KEY = "typeix:rexxar:@Param";
 /**

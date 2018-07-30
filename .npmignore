@@ -1,5 +1,5 @@
 /src/
-/build/*-spec.js
+/build/*-spec.*
 /jest-runner.json
 /tsconfig.json
 /tslint.json

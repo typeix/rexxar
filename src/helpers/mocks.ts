@@ -9,8 +9,7 @@ import {ControllerResolver} from "../resolvers/controller";
 import {ERROR_KEY, fireRequest} from "../resolvers/request";
 import {IResolvedRoute, RestMethods} from "@typeix/router";
 import {getMetadataArgs} from "./metadata";
-import {IControllerMetadata} from "../interfaces";
-import {IModuleMetadata} from "..";
+import {IControllerMetadata} from "../decorators";
 
 
 export interface IFakeServerConfig {

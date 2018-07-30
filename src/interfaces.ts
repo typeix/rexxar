@@ -1,4 +1,3 @@
-import {IProvider} from "@typeix/di";
 import {StatusCodes} from "@typeix/utils";
 
 
@@ -15,19 +14,6 @@ export interface IFilter {
   after(data: string | Buffer): string | Buffer | Promise<string | Buffer>;
 }
 
-/**
- * @since 1.0.0
- * @interface
- * @name IControllerMetadata
- *
- * @description
- * ControllerResolver metadata
- */
-export interface IControllerMetadata {
-  name: string;
-  filters?: Array<TFilter>;
-  providers?: Array<IProvider|Function>;
-}
 /**
  * @since 1.0.0
  * @interface

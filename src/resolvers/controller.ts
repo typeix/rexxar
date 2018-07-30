@@ -24,7 +24,7 @@ import {
   StatusCodes
 } from "@typeix/utils";
 import {fromRestMethod, IResolvedRoute, RestMethods} from "@typeix/router";
-import {IConnection, IControllerMetadata} from "../interfaces";
+import {IConnection} from "../interfaces";
 import {ERROR_KEY} from "./request";
 import {
   getAllMetadataByDecorator,
@@ -33,6 +33,7 @@ import {
   getMetadataByTargetKey,
   getMetadataValue
 } from "../helpers/metadata";
+import {IControllerMetadata} from "../decorators";
 
 
 const TX_PARAMS = "#design:paramtypes";
