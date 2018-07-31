@@ -89,7 +89,7 @@ export function fireRequest(moduleInjector: ModuleInjector,
   if (!isDefined(rootModuleMetadata)) {
     return Promise.reject(new ServerError(500, "@RootModule is not defined"))
   }
-  let rootInjector = moduleInjector.getInjector(rootModuleMetadata.token);
+  let rootInjector: Injector = moduleInjector.getInjector(rootModuleMetadata.token);
   let logger = rootInjector.get(Logger);
   /**
    * Create RequestResolver injector

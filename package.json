@@ -33,7 +33,7 @@
   "dependencies": {
     "@typeix/di": "^1.5.0",
     "@typeix/modules": "^1.5.0",
-    "@typeix/router": "^1.4.3",
+    "@typeix/router": "^1.5.0",
     "@typeix/utils": "^1.4.2"
   }
 }
