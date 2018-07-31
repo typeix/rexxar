@@ -2,7 +2,7 @@ import {Readable, Writable} from "stream";
 import {Socket} from "net";
 import {EventEmitter} from "events";
 import {IncomingMessage, ServerResponse} from "http";
-import {isObject, Logger, ServerError, uuid} from "@typeix/utils";
+import {isArray, isObject, Logger, ServerError, uuid} from "@typeix/utils";
 import {Inject, Injector, IProvider, verifyProvider} from "@typeix/di";
 import {ModuleInjector} from "@typeix/modules";
 import {ControllerResolver} from "../resolvers/controller";
@@ -10,6 +10,7 @@ import {ERROR_KEY, fireRequest} from "../resolvers/request";
 import {IResolvedRoute, RestMethods} from "@typeix/router";
 import {getMetadataArgs} from "./metadata";
 import {IControllerMetadata} from "../decorators";
+import {RootModuleMetadata} from "../decorators/module";
 
 
 export interface IFakeServerConfig {
@@ -28,7 +29,11 @@ export interface IFakeServerConfig {
  */
 
 export function fakeHttpServer(Class: Function, config?: IFakeServerConfig): FakeServerApi {
-  let moduleInjector = ModuleInjector.createAndResolve(Class);
+  let metadata: RootModuleMetadata = getMetadataArgs(Class, "#typeix:@Module");
+  if (metadata.name != "root") {
+    throw new ServerError(500, "fakeHttpServer must be initialized on @RootModule")
+  }
+  let moduleInjector = ModuleInjector.createAndResolve(Class, isArray(metadata.shared_providers) ? metadata.shared_providers : []);
   let fakeServerInjector = Injector.createAndResolve(FakeServerApi, [
     {provide: ModuleInjector, useValue: moduleInjector}
   ]);

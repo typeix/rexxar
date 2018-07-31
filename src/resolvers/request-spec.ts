@@ -134,7 +134,7 @@ describe("RequestResolver", () => {
     class MyModule {
     }
 
-    let moduleInjector = ModuleInjector.createAndResolve(MyModule);
+    let moduleInjector = ModuleInjector.createAndResolve(MyModule, []);
     let requestResolver = createResolver(id, data, request, response, moduleInjector);
     let resolvedModule = requestResolver.getResolvedModule(resolvedRoute);
     let controllerProvider: IProvider = RequestResolver.getControllerProvider(resolvedModule);
@@ -166,7 +166,7 @@ describe("RequestResolver", () => {
     resolvedRoute.route = "test/index";
 
     expect(() => {
-      let moduleInjector = ModuleInjector.createAndResolve(MyModule);
+      let moduleInjector = ModuleInjector.createAndResolve(MyModule, []);
       let requestResolver = createResolver(id, data, request, response, moduleInjector);
       let resolvedModule = requestResolver.getResolvedModule(resolvedRoute);
       RequestResolver.getControllerProvider(resolvedModule);
@@ -198,7 +198,7 @@ describe("RequestResolver", () => {
     }
 
 
-    let moduleInjector = ModuleInjector.createAndResolve(MyModule);
+    let moduleInjector = ModuleInjector.createAndResolve(MyModule, []);
     let requestResolver = createResolver(id, data, request, response, moduleInjector);
     let resolvedModule = requestResolver.getResolvedModule(resolvedRoute);
 
@@ -246,7 +246,7 @@ describe("RequestResolver", () => {
     request.url = "/";
     request.headers = {};
 
-    let moduleInjector = ModuleInjector.createAndResolve(MyModule);
+    let moduleInjector = ModuleInjector.createAndResolve(MyModule, []);
     let requestResolver = createResolver(id, data, request, response, moduleInjector, moduleInjector.getInjector(MyModule));
     let mModule = moduleInjector.get(MyModule);
     expect(mModule).toBeInstanceOf(MyModule);
@@ -297,7 +297,7 @@ describe("RequestResolver", () => {
     request.url = "/";
     request.headers = {};
 
-    let moduleInjector = ModuleInjector.createAndResolve(MyModule);
+    let moduleInjector = ModuleInjector.createAndResolve(MyModule, []);
     let requestResolver = createResolver(id, data, request, response, moduleInjector, moduleInjector.getInjector(MyModule));
 
 

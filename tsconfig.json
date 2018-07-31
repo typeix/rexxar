@@ -19,8 +19,7 @@
     "src/*"
   ],
   "exclude": [
-    "node_modules",
-    "src/request.ts"
+    "node_modules"
   ],
   "compileOnSave": true
 }

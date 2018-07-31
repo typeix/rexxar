@@ -1,9 +1,9 @@
 import {createServer, IncomingMessage, ServerResponse} from "http";
 import {ModuleInjector} from "@typeix/modules";
-import {IModuleMetadata} from "..";
 import {getMetadataArgs} from "../helpers/metadata";
 import {isString, Logger, ServerError} from "@typeix/utils";
 import {fireRequest} from "../resolvers/request";
+import {RootModuleMetadata} from "../decorators/module";
 
 export interface HttpServerConfig {
   port: number;
@@ -22,11 +22,11 @@ export interface HttpServerConfig {
  */
 export function httpServer(Class: Function, config: HttpServerConfig): ModuleInjector {
 
-  let metadata: IModuleMetadata = getMetadataArgs(Class, "#typeix:@Module");
+  let metadata: RootModuleMetadata = getMetadataArgs(Class, "#typeix:@Module");
   if (metadata.name != "root") {
-    throw new ServerError(500, "Server can be initialized on on @RootModule")
+    throw new ServerError(500, "Server must be initialized on @RootModule")
   }
-  let moduleInjector = ModuleInjector.createAndResolve(Class);
+  let moduleInjector = ModuleInjector.createAndResolve(Class, metadata.shared_providers);
   let injector = moduleInjector.getInjector(Class);
   let logger: Logger = injector.get(Logger);
   let server = createServer();

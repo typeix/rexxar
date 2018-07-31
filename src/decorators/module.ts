@@ -1,21 +1,22 @@
 import {Module as AModule, IModuleMetadata as AIModuleMetadata} from "@typeix/modules";
 import {IProvider} from "@typeix/di";
-import {isUndefined, ServerError} from "@typeix/utils";
+import {isArray, isUndefined, ServerError} from "@typeix/utils";
 
 /**
  * @since 1.0.0
  * @interface
- * @name ControllerModuleMetadata
+ * @name RootModuleMetadata
  * @param {Array<Function|IProvider>} imports
  * @param {Array<Function|IProvider>} exports
  * @param {Array<IProvider|Function>} providers
  * @param {Array<IProvider|Function>} controllers
  *
  * @description
- * ControllerModuleMetadata metadata
+ * RootModuleMetadata metadata
  */
-export interface ControllerModuleMetadata extends AIModuleMetadata {
+export interface RootModuleMetadata extends AIModuleMetadata {
   controllers: Array<Function | IProvider>;
+  shared_providers?: Array<Function | IProvider>;
   name?: string;
 }
 
@@ -32,7 +33,8 @@ export interface ControllerModuleMetadata extends AIModuleMetadata {
  * @description
  * IModuleMetadata metadata
  */
-export interface IModuleMetadata extends ControllerModuleMetadata {
+export interface IModuleMetadata extends AIModuleMetadata {
+  controllers: Array<Function | IProvider>;
   name: string;
 }
 
@@ -60,7 +62,16 @@ export interface IModuleMetadata extends ControllerModuleMetadata {
  *    }
  * }
  */
-export let Module = (config: IModuleMetadata): ClassDecorator => AModule(config);
+export let Module = (config: IModuleMetadata): ClassDecorator => {
+  if (!isArray(config.providers)) {
+    config.providers = [];
+  }
+  if (!isArray(config.exports)) {
+    config.exports = [];
+  }
+  return AModule(config);
+
+};
 
 /**
  * Bootstrap module name
@@ -91,11 +102,14 @@ export const BOOTSTRAP_MODULE = "root";
  *    }
  * }
  */
-export let RootModule = (config: ControllerModuleMetadata): ClassDecorator => {
+export let RootModule = (config: RootModuleMetadata): ClassDecorator => {
   if (isUndefined(config.name)) {
     config.name = BOOTSTRAP_MODULE;
   } else if (config.name !== BOOTSTRAP_MODULE) {
     throw new ServerError(500, "RootModule name must be root");
+  }
+  if (isUndefined(config.shared_providers)) {
+    config.shared_providers = [];
   }
   return AModule(config);
 };
