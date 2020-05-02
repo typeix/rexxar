@@ -1,5 +1,16 @@
 import {IAfterConstruct, Inject, Injectable, Injector, IProvider, verifyProvider} from "@typeix/di";
-import {isDefined, isFalsy, isString, isTruthy, Logger, ServerError, StatusCodes, uuid} from "@typeix/utils";
+import {
+  isDefined,
+  isEqual,
+  isFalsy,
+  isObject,
+  isString,
+  isTruthy,
+  Logger,
+  ServerError,
+  StatusCodes,
+  uuid
+} from "@typeix/utils";
 import {IResolvedRoute, RestMethods, Router} from "@typeix/router";
 import {IncomingMessage, OutgoingHttpHeaders, ServerResponse} from "http";
 import {EventEmitter} from "events";
@@ -84,7 +95,7 @@ export interface IModule {
 export function fireRequest(moduleInjector: ModuleInjector,
                             request: IncomingMessage,
                             response: ServerResponse): Promise<string | Buffer> {
-  let moduleList = <Array<{ token: any, metadata: any }>> moduleInjector.getAllMetadata();
+  let moduleList = <Array<{ token: any, metadata: any }>>moduleInjector.getAllMetadata();
   let rootModuleMetadata = moduleList.find(item => item.metadata.name === BOOTSTRAP_MODULE);
   if (!isDefined(rootModuleMetadata)) {
     return Promise.reject(new ServerError(500, "@RootModule is not defined"))
@@ -121,12 +132,14 @@ export function fireRequest(moduleInjector: ModuleInjector,
 
   return rRouteResolver
     .process()
-    .catch(error =>
-      logger.error("ControllerResolver.error", {
-        stack: error.stack,
-        url: request.url,
-        error
-      })
+    .catch(error => {
+        logger.error("ControllerResolver.error", {
+          stack: error.stack,
+          url: request.url,
+          error
+        });
+        return error;
+      }
     );
 }
 
@@ -346,7 +359,7 @@ export class RequestResolver implements IAfterConstruct {
 
     }
 
-    return await Logger.clean(data.toString());
+    return Logger.clean(data.toString());
   }
 
   /**
@@ -362,11 +375,22 @@ export class RequestResolver implements IAfterConstruct {
    */
   async render(response: string | Buffer, type: RenderType): Promise<string | Buffer> {
 
-    let headers: OutgoingHttpHeaders = {"Content-Type": <string> this.contentType};
+    let headers: OutgoingHttpHeaders = {"Content-Type": <string>this.contentType};
 
     switch (type) {
       case RenderType.DATA_HANDLER:
+        if (isEqual(this.contentType, "application/json") && isObject(response)) {
+          try {
+            response = JSON.stringify(response)
+          } catch (e) {
+            this.logger.error("Cannot convert to json", {
+              id: this.id,
+              type: typeof response
+            });
+          }
+        }
         if (isString(response) || (response instanceof Buffer)) {
+
           this.response.writeHead(this.statusCode, headers);
           this.response.write(response);
           this.response.end();
@@ -520,7 +544,7 @@ export class RequestResolver implements IAfterConstruct {
          * ON POST, PATCH, PUT process body
          */
         if ([RestMethods.POST, RestMethods.PATCH, RestMethods.PUT].indexOf(resolvedRoute.method) > -1) {
-          this.request.on("data", item => this.data.push(<Buffer> item));
+          this.request.on("data", item => this.data.push(<Buffer>item));
           return new Promise((resolve, reject) => {
             this.request.on("error", reject.bind(this));
             this.request.on("end", resolve.bind(this, resolvedRoute));
@@ -546,7 +570,7 @@ export class RequestResolver implements IAfterConstruct {
    * @returns {IModule}
    */
   getModule(name: string): IModule {
-    let modules = <Array<{ token: any, metadata: any }>> this.moduleInjector.getAllMetadata();
-    return <IModule> modules.find(item => item.metadata.name === name);
+    let modules = <Array<{ token: any, metadata: any }>>this.moduleInjector.getAllMetadata();
+    return <IModule>modules.find(item => item.metadata.name === name);
   }
 }

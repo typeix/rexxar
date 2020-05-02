@@ -106,7 +106,7 @@ export let RootModule = (config: RootModuleMetadata): ClassDecorator => {
   if (isUndefined(config.name)) {
     config.name = BOOTSTRAP_MODULE;
   } else if (config.name !== BOOTSTRAP_MODULE) {
-    throw new ServerError(500, "RootModule name must be root");
+    throw new ServerError(500, `RootModule name must be ${BOOTSTRAP_MODULE}`);
   }
   if (isUndefined(config.shared_providers)) {
     config.shared_providers = [];

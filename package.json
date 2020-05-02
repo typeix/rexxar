@@ -1,6 +1,6 @@
 {
   "name": "@typeix/rexxar",
-  "version": "1.2.0",
+  "version": "2.1.0",
   "description": "mvc framework for typescript",
   "main": "build/index.js",
   "scripts": {
@@ -16,24 +16,28 @@
     "modules",
     "typescript"
   ],
-  "author": "igor.zg1987@gmail.com",
+  "author": "igor.ivanovic@pm.me",
   "license": "MIT",
   "bugs": {
     "url": "https://github.com/typeix/rexxar/issues"
   },
   "homepage": "https://github.com/typeix/rexxar#readme",
   "devDependencies": {
-    "@types/jest": "^22.2.3",
-    "@types/node": "^9.6.24",
-    "jest": "^22.4.3",
-    "ts-jest": "^22.4.5",
-    "tslint": "^5.11.0",
-    "typescript": "^2.9.2"
+    "@types/aws-lambda": "^8.10.51",
+    "@types/jest": "^25.2.1",
+    "@types/node": "^12.12.37",
+    "jest": "^25.5.4",
+    "ts-jest": "^25.4.0",
+    "tslint": "^6.1.2",
+    "typescript": "^3.8.3"
   },
   "dependencies": {
-    "@typeix/di": "^1.5.0",
-    "@typeix/modules": "^1.5.0",
-    "@typeix/router": "^1.5.0",
-    "@typeix/utils": "^1.4.2"
+    "@typeix/di": "^2.1.0",
+    "@typeix/modules": "^2.1.0",
+    "@typeix/router": "^2.1.0",
+    "@typeix/utils": "^2.0.0"
+  },
+  "engines": {
+    "node": ">=12.0"
   }
 }

@@ -3,7 +3,7 @@ import {ModuleInjector} from "@typeix/modules";
 import {getMetadataArgs} from "../helpers/metadata";
 import {isString, Logger, ServerError} from "@typeix/utils";
 import {fireRequest} from "../resolvers/request";
-import {RootModuleMetadata} from "../decorators/module";
+import {BOOTSTRAP_MODULE, RootModuleMetadata} from "../decorators/module";
 
 export interface HttpServerConfig {
   port: number;
@@ -23,7 +23,7 @@ export interface HttpServerConfig {
 export function httpServer(Class: Function, config: HttpServerConfig): ModuleInjector {
 
   let metadata: RootModuleMetadata = getMetadataArgs(Class, "#typeix:@Module");
-  if (metadata.name != "root") {
+  if (metadata.name != BOOTSTRAP_MODULE) {
     throw new ServerError(500, "Server must be initialized on @RootModule")
   }
   let moduleInjector = ModuleInjector.createAndResolve(Class, metadata.shared_providers);

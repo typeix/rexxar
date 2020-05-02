@@ -10,7 +10,7 @@ import {ERROR_KEY, fireRequest} from "../resolvers/request";
 import {IResolvedRoute, RestMethods} from "@typeix/router";
 import {getMetadataArgs} from "./metadata";
 import {IControllerMetadata} from "../decorators";
-import {RootModuleMetadata} from "../decorators/module";
+import {BOOTSTRAP_MODULE, RootModuleMetadata} from "../decorators/module";
 
 
 export interface IFakeServerConfig {
@@ -30,7 +30,7 @@ export interface IFakeServerConfig {
 
 export function fakeHttpServer(Class: Function, config?: IFakeServerConfig): FakeServerApi {
   let metadata: RootModuleMetadata = getMetadataArgs(Class, "#typeix:@Module");
-  if (metadata.name != "root") {
+  if (metadata.name != BOOTSTRAP_MODULE) {
     throw new ServerError(500, "fakeHttpServer must be initialized on @RootModule")
   }
   let moduleInjector = ModuleInjector.createAndResolve(Class, isArray(metadata.shared_providers) ? metadata.shared_providers : []);
@@ -260,7 +260,7 @@ export class FakeServerApi {
     request.url = url;
     request.headers = headers;
     // simulate async event
-    setTimeout(() => {
+    process.nextTick(() => {
       request.emit("data", data);
       request.emit("end");
     });
@@ -280,7 +280,7 @@ export class FakeServerApi {
     request.url = url;
     request.headers = headers;
     // simulate async event
-    setTimeout(() => {
+    process.nextTick(() => {
       request.emit("data", data);
       request.emit("end");
     });
@@ -300,7 +300,7 @@ export class FakeServerApi {
     request.url = url;
     request.headers = headers;
     // simulate async event
-    setTimeout(() => {
+    process.nextTick(() => {
       request.emit("data", data);
       request.emit("end");
     });
@@ -316,7 +316,7 @@ export class FakeServerApi {
    * Fire request
    */
   private request(request: FakeIncomingMessage, response: FakeServerResponse): Promise<FakeResponseApi> {
-    return fireRequest(this.getModuleInjector(), request, response).then(data => {
+    return fireRequest(this.getModuleInjector(), request, response).then(() => {
       return {
         getBody: () => response.getBody(),
         getHeaders: () => response.getHeaders(),
@@ -338,7 +338,7 @@ export class FakeServerApi {
  *
  * @private
  */
-class FakeIncomingMessage extends Readable implements IncomingMessage {
+export class FakeIncomingMessage extends Readable implements IncomingMessage {
   httpVersion: string = "1.1";
   httpVersionMajor: number = 1;
   httpVersionMinor: number = 1;
@@ -352,18 +352,24 @@ class FakeIncomingMessage extends Readable implements IncomingMessage {
   statusCode?: number;
   statusMessage?: string;
   socket: Socket;
+  aborted: boolean;
+  complete: boolean;
 
   _read(size: number): void {
-    console.log(size);
+    console.log("_read");
   }
 
   setTimeout(msecs: number, callback: () => void): this {
-    return undefined;
+    setTimeout(callback, msecs);
+    return this;
   }
 
   destroy(error?: Error) {
-    return null;
+    console.log(error);
+    console.log("destroy");
   }
+
+
 }
 
 
@@ -378,7 +384,7 @@ class FakeIncomingMessage extends Readable implements IncomingMessage {
  *
  * @private
  */
-class FakeServerResponse extends Writable implements ServerResponse {
+export class FakeServerResponse extends Writable implements ServerResponse {
   upgrading: boolean;
   chunkedEncoding: boolean;
   shouldKeepAlive: boolean;
@@ -426,6 +432,7 @@ class FakeServerResponse extends Writable implements ServerResponse {
    */
   end() {
     this.emit("finish");
+    this.headersSent = true;
     this.finished = true;
   }
 
@@ -437,12 +444,13 @@ class FakeServerResponse extends Writable implements ServerResponse {
    * @description
    * Write head
    */
-  writeHead(statusCode: number, headers?: any) {
+  writeHead(statusCode: number, headers?: any): this {
     this.statusCode = statusCode;
     if (isObject(headers)) {
       Object.assign(this.headers, headers);
     }
     this.headersSent = true;
+    return this
   }
 
   /**
@@ -596,7 +604,8 @@ class FakeServerResponse extends Writable implements ServerResponse {
    * set timeout
    */
   setTimeout(msecs: number, callback?: () => void): this {
-    return null;
+    setTimeout(callback, msecs);
+    return this;
   }
 
   /**
@@ -609,6 +618,18 @@ class FakeServerResponse extends Writable implements ServerResponse {
    */
   flushHeaders(): void {
     console.log("flushHeaders");
+  }
+
+  /**
+   * @since 2.1.0
+   * @function
+   * @name FakeServerResponse#writeProcessing
+   * @private
+   * @description
+   * flush headers
+   */
+  writeProcessing(): void {
+    console.log("writeProcessing");
   }
 
 

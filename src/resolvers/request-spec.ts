@@ -78,7 +78,7 @@ describe("RequestResolver", () => {
     };
     response = new ResponseEmitter();
     request = new ResponseEmitter();
-    data = [new Buffer(1), new Buffer(1)];
+    data = [Buffer.alloc(1), Buffer.alloc(1)];
   });
 
 

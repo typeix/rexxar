@@ -41,7 +41,7 @@ describe("ControllerResolver", () => {
     };
     response = new EventEmitter();
     request = new EventEmitter();
-    data = [new Buffer(1), new Buffer(1)];
+    data = [Buffer.alloc(1), Buffer.alloc(1)];
     controllerProvider = {};
     IRequest = {};
     eventEmitter = new EventEmitter();

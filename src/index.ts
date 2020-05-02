@@ -21,7 +21,10 @@ export {
 
 export {
   httpServer,
-  httpsServer
+  httpsServer,
+  HttpServerConfig,
+  HttpsServerConfig,
+  lambdaServer
 } from "./servers/index";
 
 export {

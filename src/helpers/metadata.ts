@@ -1,4 +1,4 @@
-import {IMetadata, IMetadataValue, InMemoryMetadataCache} from "@typeix/di";
+import {IMetadata, IMetadataValue, MetadataProxy} from "@typeix/di";
 import {isDefined} from "@typeix/utils";
 
 const DNX = /#(.*)/;
@@ -21,7 +21,7 @@ export function getDecorator(name: string) {
  * @returns {IMetadata[]}
  */
 export function getAllMetadata(token: Object, inherited = true): IMetadata[] {
-  return InMemoryMetadataCache.getAllMetadata(token, inherited);
+  return MetadataProxy.getAllMetadata(token, inherited);
 }
 
 /**
