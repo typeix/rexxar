@@ -1,4 +1,4 @@
-import {StatusCodes} from "@typeix/utils";
+import {StatusCodes} from "@typeix/router";
 
 
 /**

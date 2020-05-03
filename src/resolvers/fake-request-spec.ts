@@ -2,10 +2,9 @@ import {fakeHttpServer, FakeResponseApi, FakeServerApi} from "../helpers/mocks";
 import {Action, Before, Chain, Controller, ErrorMessage, Module} from "..";
 import {Request} from "./controller";
 import {IAfterConstruct, Inject} from "@typeix/di";
-import {Logger, LogLevels, ServerError, StatusCodes} from "@typeix/utils";
-import {RestMethods, Router} from "@typeix/router";
+import {Logger, LogLevels} from "@typeix/utils";
+import {RestMethods, Router, ServerError, StatusCodes} from "@typeix/router";
 import {BOOTSTRAP_MODULE} from "../decorators/module";
-
 
 describe("fakeHttpServer", () => {
 
@@ -24,7 +23,7 @@ describe("fakeHttpServer", () => {
 
       @Action("error")
       actionError(@ErrorMessage message: ServerError) {
-        return "ERROR=" + message.getMessage();
+        return "ERROR=" + message.getMessage() + "=" + this.request.getRoute();
       }
 
 

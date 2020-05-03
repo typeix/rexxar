@@ -19,11 +19,9 @@ import {
   isNumber,
   isString,
   isTruthy,
-  Logger,
-  ServerError,
-  StatusCodes
+  Logger
 } from "@typeix/utils";
-import {fromRestMethod, IResolvedRoute, RestMethods} from "@typeix/router";
+import {fromRestMethod, IResolvedRoute, RestMethods, ServerError, StatusCodes} from "@typeix/router";
 import {IConnection} from "../interfaces";
 import {REQUEST_ERROR_KEY} from "./request";
 import {
@@ -35,6 +33,8 @@ import {
 } from "../helpers/metadata";
 import {IControllerMetadata} from "../decorators";
 import {CHAIN_METADATA_KEY} from "../decorators/chain";
+import {PARAM_METADATA_KEY} from "../decorators/param";
+import {ERROR_MESSAGE_METADATA_KEY} from "../decorators/error";
 
 
 const TX_PARAMS = "design:paramtypes";
@@ -410,20 +410,20 @@ export class ControllerResolver {
       // push action params
       params.forEach(param => {
         switch (param.name) {
-          case "typeix:rexxar:@Param":
+          case PARAM_METADATA_KEY:
             if (isDefined(this.resolvedRoute.params) && this.resolvedRoute.params.hasOwnProperty(param.args.value)) {
               actionParams.push(this.resolvedRoute.params[param.args.value]);
             } else {
               actionParams.push(null);
             }
             break;
-          case "typeix:rexxar:@Chain":
+          case CHAIN_METADATA_KEY:
             actionParams.push(injector.get(CHAIN_METADATA_KEY));
             break;
           case "typeix:@Inject":
             actionParams.push(injector.get(param.args.value));
             break;
-          case "typeix:rexxar:@ErrorMessage":
+          case ERROR_MESSAGE_METADATA_KEY:
             actionParams.push(injector.get(REQUEST_ERROR_KEY));
             break;
         }
@@ -760,14 +760,14 @@ export class Request {
 
     if (isDefined(expires) && isNumber(expires)) {
       let date: Date = new Date();
-      date.setTime(date.getTime() + (<number> expires));
+      date.setTime(date.getTime() + (<number>expires));
       cookie += "; Expires=";
       cookie += date.toUTCString();
     } else if (isDefined(expires) && isString(expires)) {
       cookie += "; Expires=" + expires;
     } else if (isDefined(expires) && isDate(expires)) {
       cookie += "; Expires=";
-      cookie += (<Date> expires).toUTCString();
+      cookie += (<Date>expires).toUTCString();
     }
 
     if (isDefined(path)) {

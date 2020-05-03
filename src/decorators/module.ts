@@ -1,6 +1,7 @@
 import {Module as AModule, IModuleMetadata as AIModuleMetadata} from "@typeix/modules";
 import {IProvider} from "@typeix/di";
-import {isArray, isUndefined, ServerError} from "@typeix/utils";
+import {isArray, isUndefined} from "@typeix/utils";
+import {ServerError} from "@typeix/router";
 
 /**
  * @since 1.0.0
@@ -77,7 +78,7 @@ export let Module = (config: IModuleMetadata): ClassDecorator => {
  * Bootstrap module name
  * @type {string}
  */
-export const BOOTSTRAP_MODULE = "root";
+export const BOOTSTRAP_MODULE = "typeix:rexxar:@RootModule";
 /**
  * Module decorator
  * @decorator

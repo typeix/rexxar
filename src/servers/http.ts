@@ -1,9 +1,10 @@
 import {createServer, IncomingMessage, ServerResponse} from "http";
 import {MODULE_METADATA_KEY, ModuleInjector} from "@typeix/modules";
 import {getMetadataArgs} from "../helpers/metadata";
-import {isString, Logger, ServerError} from "@typeix/utils";
+import {isString, Logger} from "@typeix/utils";
 import {fireRequest} from "../resolvers/request";
 import {BOOTSTRAP_MODULE, RootModuleMetadata} from "../decorators/module";
+import {ServerError} from "@typeix/router";
 
 export interface HttpServerConfig {
   port: number;

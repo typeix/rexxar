@@ -1,6 +1,5 @@
 import {EventEmitter} from "events";
 import {parse} from "url";
-import {setTimeout} from "timers";
 import {IResolvedRoute, RestMethods, Router} from "@typeix/router";
 import {IResolvedModule, RenderType, RequestResolver} from "./request";
 import {Logger, uuid} from "@typeix/utils";
