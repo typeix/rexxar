@@ -1,6 +1,6 @@
 import {createServer, ServerOptions} from "https";
 import {IncomingMessage, ServerResponse} from "http";
-import {ModuleInjector} from "@typeix/modules";
+import {MODULE_METADATA_KEY, ModuleInjector} from "@typeix/modules";
 import {getMetadataArgs} from "../helpers/metadata";
 import {isString, Logger, ServerError} from "@typeix/utils";
 import {fireRequest} from "../resolvers/request";
@@ -24,8 +24,8 @@ export interface HttpsServerConfig {
  */
 export function httpsServer(Class: Function, config: HttpsServerConfig): ModuleInjector {
 
-  let metadata: RootModuleMetadata = getMetadataArgs(Class, "#typeix:@Module");
-  if (metadata.name != BOOTSTRAP_MODULE) {
+  let metadata: RootModuleMetadata = getMetadataArgs(Class, MODULE_METADATA_KEY);
+  if (metadata?.name != BOOTSTRAP_MODULE) {
     throw new ServerError(500, "Server must be initialized on @RootModule")
   }
   let moduleInjector = ModuleInjector.createAndResolve(Class, metadata.shared_providers);

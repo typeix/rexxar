@@ -1,17 +1,31 @@
 import {IMetadata, IMetadataValue, MetadataProxy} from "@typeix/di";
 import {isDefined} from "@typeix/utils";
 
-const DNX = /#(.*)/;
+
 /**
  * Return decorator name
  * @param {string} name
  * @returns {string}
  */
 export function getDecorator(name: string) {
-  if (DNX.test(name)) {
-    return name.replace(DNX, "$1");
+  switch (name) {
+    case "BeforeEach":
+    case "AfterEach":
+    case "Action":
+    case "Before":
+    case "After":
+    case "Provider":
+    case "Produces":
+    case "Param":
+    case "Filter":
+    case "ErrorMessage":
+    case "Controller":
+    case "Chain":
+      return "typeix:rexxar:@" + name;
+    default:
+      return name;
   }
-  return "typeix:rexxar:@" + name;
+
 }
 
 /**

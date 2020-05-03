@@ -7,6 +7,7 @@ import {Logger, uuid} from "@typeix/utils";
 import {IAfterConstruct, Inject, Injector, IProvider, verifyProvider} from "@typeix/di";
 import {ModuleInjector} from "@typeix/modules";
 import {Action, Controller, Module} from "..";
+import {BOOTSTRAP_MODULE} from "../decorators/module";
 
 
 class ResponseEmitter extends EventEmitter {
@@ -127,7 +128,7 @@ describe("RequestResolver", () => {
     }
 
     @Module({
-      name: "root",
+      name: BOOTSTRAP_MODULE,
       controllers: [MyController],
       providers: []
     })
@@ -156,7 +157,7 @@ describe("RequestResolver", () => {
     }
 
     @Module({
-      name: "root",
+      name: BOOTSTRAP_MODULE,
       controllers: [MyController],
       providers: []
     })
@@ -190,7 +191,7 @@ describe("RequestResolver", () => {
     }
 
     @Module({
-      name: "root",
+      name: BOOTSTRAP_MODULE,
       providers: [Logger, Router],
       controllers: [MyController]
     })
@@ -225,7 +226,7 @@ describe("RequestResolver", () => {
     }
 
     @Module({
-      name: "root",
+      name: BOOTSTRAP_MODULE,
       providers: [Logger, Router],
       controllers: [MyController]
     })
@@ -276,7 +277,7 @@ describe("RequestResolver", () => {
     }
 
     @Module({
-      name: "root",
+      name: BOOTSTRAP_MODULE,
       providers: [Logger, Router],
       controllers: [MyController]
     })
@@ -304,12 +305,12 @@ describe("RequestResolver", () => {
     let a = [Buffer.from("a"), Buffer.from("b"), Buffer.from("c")];
 
     // simulate async data processing
-    setTimeout(() => {
+    process.nextTick(() => {
       request.emit("data", a[0]);
       request.emit("data", a[1]);
       request.emit("data", a[2]);
       request.emit("end");
-    }, 0);
+    });
 
     let aSpy = jest.spyOn(requestResolver, "render");
     let bSpy = jest.spyOn(requestResolver, "processModule");

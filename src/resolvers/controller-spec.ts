@@ -19,6 +19,8 @@ import {
 } from "..";
 import {getMetadataArgs} from "../helpers/metadata";
 import {fakeControllerActionCall} from "../helpers/mocks";
+import {BOOTSTRAP_MODULE} from "../decorators/module";
+import {CHAIN_METADATA_KEY} from "../decorators/chain";
 
 
 describe("ControllerResolver", () => {
@@ -326,7 +328,7 @@ describe("ControllerResolver", () => {
     let aSpy = jest.spyOn(eventEmitter, "emit");
 
     @Controller({
-      name: "root"
+      name: BOOTSTRAP_MODULE
     })
     class A {
 
@@ -339,7 +341,7 @@ describe("ControllerResolver", () => {
 
     let aProvider = verifyProvider(A);
     let action: IMetadata = controllerResolver.getMappedAction(aProvider, "index");
-    let chain = "__chain__";
+    let chain = CHAIN_METADATA_KEY;
 
     // create controller injector
     let injector = new Injector(null, [chain]);
@@ -387,7 +389,7 @@ describe("ControllerResolver", () => {
 
     @Controller({
       filters: [AFilter, BFilter],
-      name: "root"
+      name: BOOTSTRAP_MODULE
     })
     class A {
 
@@ -403,7 +405,7 @@ describe("ControllerResolver", () => {
     }
 
     let aProvider = verifyProvider(A);
-    let chain = "__chain__";
+    let chain = CHAIN_METADATA_KEY;
 
     // create controller injector
     let injector = new Injector(null, [chain]);
@@ -424,7 +426,7 @@ describe("ControllerResolver", () => {
 
   test("ControllerResolver.processController no action chain", (done) => {
     @Controller({
-      name: "root"
+      name: BOOTSTRAP_MODULE
     })
     class A {
 
@@ -458,7 +460,7 @@ describe("ControllerResolver", () => {
 
 
     @Controller({
-      name: "root"
+      name: BOOTSTRAP_MODULE
     })
     class A {
 
@@ -536,7 +538,7 @@ describe("ControllerResolver", () => {
     }
 
     @Controller({
-      name: "root",
+      name: BOOTSTRAP_MODULE,
       filters: [AFilter, BFilter]
     })
     class A {
@@ -615,7 +617,7 @@ describe("ControllerResolver", () => {
     }
 
     @Controller({
-      name: "root",
+      name: BOOTSTRAP_MODULE,
       filters: [AFilter, BFilter]
     })
     class A {
@@ -703,7 +705,7 @@ describe("ControllerResolver", () => {
     }
 
     @Controller({
-      name: "root",
+      name: BOOTSTRAP_MODULE,
       filters: [AFilter, BFilter]
     })
     class A {
@@ -795,7 +797,7 @@ describe("ControllerResolver", () => {
     }
 
     @Controller({
-      name: "root",
+      name: BOOTSTRAP_MODULE,
       filters: [AFilter, BFilter]
     })
     class A {

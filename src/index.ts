@@ -24,7 +24,9 @@ export {
   httpsServer,
   HttpServerConfig,
   HttpsServerConfig,
-  lambdaServer
+  lambdaServer,
+  LAMBDA_EVENT,
+  LAMBDA_CONTEXT
 } from "./servers/index";
 
 export {

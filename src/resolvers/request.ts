@@ -17,14 +17,14 @@ import {EventEmitter} from "events";
 import {parse, Url} from "url";
 import {IRedirect} from "../interfaces";
 import {ControllerResolver} from "./controller";
-import {ModuleInjector} from "@typeix/modules";
-import {IControllerMetadata, IModuleMetadata} from "..";
+import {MODULE_METADATA_KEY, ModuleInjector} from "@typeix/modules";
+import {IControllerMetadata, IModuleMetadata, LAMBDA_CONTEXT, LAMBDA_EVENT} from "..";
 import {getMetadataArgs} from "../helpers/metadata";
 import {BOOTSTRAP_MODULE} from "../decorators/module";
 
 
-export const MODULE_KEY = "__module__";
-export const ERROR_KEY = "__error__";
+export const REQUEST_MODULE_KEY = "typeix:rexxar:@Injector:module";
+export const REQUEST_ERROR_KEY = "typeix:rexxar:@Injector:error";
 
 /**
  * @since 1.0.0
@@ -269,7 +269,7 @@ export class RequestResolver implements IAfterConstruct {
   static getControllerProvider(resolvedModule: IResolvedModule): IProvider {
 
     let provider: IProvider = verifyProvider(resolvedModule.module.token);
-    let moduleMetadata: IModuleMetadata = getMetadataArgs(provider.provide, "#typeix:@Module");
+    let moduleMetadata: IModuleMetadata = getMetadataArgs(provider.provide, MODULE_METADATA_KEY);
 
     let controllerProvider: IProvider = moduleMetadata.controllers
       .map(item => verifyProvider(item))
@@ -340,8 +340,8 @@ export class RequestResolver implements IAfterConstruct {
 
       let route: string;
 
-      if (this.injector.has(MODULE_KEY)) {
-        let iResolvedModule: IResolvedModule = this.injector.get(MODULE_KEY);
+      if (this.injector.has(REQUEST_MODULE_KEY)) {
+        let iResolvedModule: IResolvedModule = this.injector.get(REQUEST_MODULE_KEY);
         route = this.router.getError(iResolvedModule.module.metadata.name);
       } else {
         route = this.router.getError();
@@ -379,7 +379,7 @@ export class RequestResolver implements IAfterConstruct {
 
     switch (type) {
       case RenderType.DATA_HANDLER:
-        if (isEqual(this.contentType, "application/json") && isObject(response)) {
+        if (isEqual(this.contentType, "application/json") && isObject(response) && !(response instanceof Buffer)) {
           try {
             response = JSON.stringify(response)
           } catch (e) {
@@ -389,12 +389,10 @@ export class RequestResolver implements IAfterConstruct {
             });
           }
         }
-        if (isString(response) || (response instanceof Buffer)) {
-
+        if (isString(response) || (response instanceof Buffer) || (this.injector.has(LAMBDA_EVENT) && this.injector.has(LAMBDA_CONTEXT))) {
           this.response.writeHead(this.statusCode, headers);
           this.response.write(response);
           this.response.end();
-
         } else {
           this.logger.error("Invalid response type", {
             id: this.id,
@@ -454,7 +452,7 @@ export class RequestResolver implements IAfterConstruct {
       {provide: "actionName", useValue: resolvedModule.action},
       {provide: "resolvedRoute", useValue: resolvedModule.resolvedRoute},
       {provide: "isChainStopped", useValue: false},
-      {provide: ERROR_KEY, useValue: isTruthy(error) ? error : new ServerError(500)},
+      {provide: REQUEST_ERROR_KEY, useValue: isTruthy(error) ? error : new ServerError(500)},
       {provide: EventEmitter, useValue: this.eventEmitter}
     ];
     /**
@@ -555,7 +553,7 @@ export class RequestResolver implements IAfterConstruct {
       })
       .then((resolvedRoute: IResolvedRoute) => {
         let resolvedModule = this.getResolvedModule(resolvedRoute);
-        this.injector.set(MODULE_KEY, resolvedModule);
+        this.injector.set(REQUEST_MODULE_KEY, resolvedModule);
         return resolvedModule;
       })
       .then((resolvedModule: IResolvedModule) => this.processModule(resolvedModule))

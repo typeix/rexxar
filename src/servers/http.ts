@@ -1,5 +1,5 @@
 import {createServer, IncomingMessage, ServerResponse} from "http";
-import {ModuleInjector} from "@typeix/modules";
+import {MODULE_METADATA_KEY, ModuleInjector} from "@typeix/modules";
 import {getMetadataArgs} from "../helpers/metadata";
 import {isString, Logger, ServerError} from "@typeix/utils";
 import {fireRequest} from "../resolvers/request";
@@ -22,7 +22,7 @@ export interface HttpServerConfig {
  */
 export function httpServer(Class: Function, config: HttpServerConfig): ModuleInjector {
 
-  let metadata: RootModuleMetadata = getMetadataArgs(Class, "#typeix:@Module");
+  let metadata: RootModuleMetadata = getMetadataArgs(Class, MODULE_METADATA_KEY);
   if (metadata.name != BOOTSTRAP_MODULE) {
     throw new ServerError(500, "Server must be initialized on @RootModule")
   }

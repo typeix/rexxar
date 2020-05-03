@@ -25,7 +25,7 @@ import {
 } from "@typeix/utils";
 import {fromRestMethod, IResolvedRoute, RestMethods} from "@typeix/router";
 import {IConnection} from "../interfaces";
-import {ERROR_KEY} from "./request";
+import {REQUEST_ERROR_KEY} from "./request";
 import {
   getAllMetadataByDecorator,
   getDecorator,
@@ -34,9 +34,10 @@ import {
   getMetadataValue
 } from "../helpers/metadata";
 import {IControllerMetadata} from "../decorators";
+import {CHAIN_METADATA_KEY} from "../decorators/chain";
 
 
-const TX_PARAMS = "#design:paramtypes";
+const TX_PARAMS = "design:paramtypes";
 
 
 /**
@@ -44,7 +45,6 @@ const TX_PARAMS = "#design:paramtypes";
  * @type {RegExp}
  */
 const COOKIE_PARSE_REGEX = /(\w+[^=]+)=([^;]+)/g;
-const CHAIN_KEY = "__chain__";
 
 /**
  * @since 1.0.0
@@ -418,13 +418,13 @@ export class ControllerResolver {
             }
             break;
           case "typeix:rexxar:@Chain":
-            actionParams.push(injector.get(CHAIN_KEY));
+            actionParams.push(injector.get(CHAIN_METADATA_KEY));
             break;
           case "typeix:@Inject":
             actionParams.push(injector.get(param.args.value));
             break;
           case "typeix:rexxar:@ErrorMessage":
-            actionParams.push(injector.get(ERROR_KEY));
+            actionParams.push(injector.get(REQUEST_ERROR_KEY));
             break;
         }
       });
@@ -474,13 +474,13 @@ export class ControllerResolver {
       if (isFalsy(this.isChainStopped)) {
         if (!isAfter) {
           let start = Date.now();
-          let result = await filter.before(injector.get(CHAIN_KEY));
-          injector.set(CHAIN_KEY, result);
+          let result = await filter.before(injector.get(CHAIN_METADATA_KEY));
+          injector.set(CHAIN_METADATA_KEY, result);
           this.benchmark(`Filter.before: ${getProviderName(filter, "on filter ")}`, start);
         } else {
           let start = Date.now();
-          let result = await filter.after(injector.get(CHAIN_KEY));
-          injector.set(CHAIN_KEY, result);
+          let result = await filter.after(injector.get(CHAIN_METADATA_KEY));
+          injector.set(CHAIN_METADATA_KEY, result);
           this.benchmark(`Filter.after: ${getProviderName(filter, "on filter ")}`, start);
         }
       }
@@ -488,7 +488,7 @@ export class ControllerResolver {
       filterInjector.destroy();
     }
 
-    return await injector.get(CHAIN_KEY);
+    return await injector.get(CHAIN_METADATA_KEY);
   }
 
   /**
@@ -511,7 +511,7 @@ export class ControllerResolver {
     // benchmark
     let requestStart = Date.now();
     // create controller injector
-    let injector = new Injector(reflectionInjector, [CHAIN_KEY]);
+    let injector = new Injector(reflectionInjector, [CHAIN_METADATA_KEY]);
 
     // initialize controller
     injector.createAndResolve(
@@ -520,12 +520,12 @@ export class ControllerResolver {
     );
 
     // set default chain key
-    injector.set(CHAIN_KEY, null);
+    injector.set(CHAIN_METADATA_KEY, null);
 
     // process filters
     if (isArray(metadata.filters)) {
       // set filter result
-      injector.set(CHAIN_KEY, await this.processFilters(injector, metadata, false));
+      injector.set(CHAIN_METADATA_KEY, await this.processFilters(injector, metadata, false));
     }
 
     // process @BeforeEach action
@@ -537,7 +537,7 @@ export class ControllerResolver {
         this.getMappedAction(controllerProvider, null, "BeforeEach")
       );
 
-      injector.set(CHAIN_KEY, result);
+      injector.set(CHAIN_METADATA_KEY, result);
       this.benchmark("BeforeEach", start);
     }
 
@@ -549,7 +549,7 @@ export class ControllerResolver {
         controllerProvider,
         this.getMappedAction(controllerProvider, actionName, "Before")
       );
-      injector.set(CHAIN_KEY, result);
+      injector.set(CHAIN_METADATA_KEY, result);
       this.benchmark("Before", start);
     }
 
@@ -561,7 +561,7 @@ export class ControllerResolver {
         controllerProvider,
         this.getMappedAction(controllerProvider, actionName)
       );
-      injector.set(CHAIN_KEY, result);
+      injector.set(CHAIN_METADATA_KEY, result);
       this.benchmark("Action", start);
     }
 
@@ -573,7 +573,7 @@ export class ControllerResolver {
         controllerProvider,
         this.getMappedAction(controllerProvider, actionName, "After")
       );
-      injector.set(CHAIN_KEY, result);
+      injector.set(CHAIN_METADATA_KEY, result);
       this.benchmark("After", start);
     }
 
@@ -585,19 +585,19 @@ export class ControllerResolver {
         controllerProvider,
         this.getMappedAction(controllerProvider, null, "AfterEach")
       );
-      injector.set(CHAIN_KEY, result);
+      injector.set(CHAIN_METADATA_KEY, result);
       this.benchmark("AfterEach", start);
     }
 
     if (isFalsy(this.isChainStopped) && isArray(metadata.filters)) {
       // set filter result
-      injector.set(CHAIN_KEY, await this.processFilters(injector, metadata, true));
+      injector.set(CHAIN_METADATA_KEY, await this.processFilters(injector, metadata, true));
     }
 
     this.benchmark("Request", requestStart);
 
     // render action call
-    return await injector.get(CHAIN_KEY);
+    return await injector.get(CHAIN_METADATA_KEY);
   }
 
   /**

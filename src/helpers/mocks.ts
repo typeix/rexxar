@@ -4,9 +4,9 @@ import {EventEmitter} from "events";
 import {IncomingMessage, ServerResponse} from "http";
 import {isArray, isObject, Logger, ServerError, uuid} from "@typeix/utils";
 import {Inject, Injector, IProvider, verifyProvider} from "@typeix/di";
-import {ModuleInjector} from "@typeix/modules";
+import {MODULE_METADATA_KEY, ModuleInjector} from "@typeix/modules";
 import {ControllerResolver} from "../resolvers/controller";
-import {ERROR_KEY, fireRequest} from "../resolvers/request";
+import {REQUEST_ERROR_KEY, fireRequest} from "../resolvers/request";
 import {IResolvedRoute, RestMethods} from "@typeix/router";
 import {getMetadataArgs} from "./metadata";
 import {IControllerMetadata} from "../decorators";
@@ -29,8 +29,8 @@ export interface IFakeServerConfig {
  */
 
 export function fakeHttpServer(Class: Function, config?: IFakeServerConfig): FakeServerApi {
-  let metadata: RootModuleMetadata = getMetadataArgs(Class, "#typeix:@Module");
-  if (metadata.name != BOOTSTRAP_MODULE) {
+  let metadata: RootModuleMetadata = getMetadataArgs(Class, MODULE_METADATA_KEY);
+  if (metadata?.name != BOOTSTRAP_MODULE) {
     throw new ServerError(500, "fakeHttpServer must be initialized on @RootModule")
   }
   let moduleInjector = ModuleInjector.createAndResolve(Class, isArray(metadata.shared_providers) ? metadata.shared_providers : []);
@@ -83,7 +83,7 @@ export function fakeControllerActionCall(injector: Injector,
     {provide: "isForwarded", useValue: false},
     {provide: "isForwarder", useValue: false},
     {provide: "isChainStopped", useValue: false},
-    {provide: ERROR_KEY, useValue: new ServerError(500)},
+    {provide: REQUEST_ERROR_KEY, useValue: new ServerError(500)},
     {provide: EventEmitter, useValue: new EventEmitter()}
   ];
   // if there is no logger provide it
