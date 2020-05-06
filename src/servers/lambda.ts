@@ -4,10 +4,8 @@ import {isString, Logger} from "@typeix/utils";
 import {fireRequest} from "../resolvers/request";
 import {BOOTSTRAP_MODULE, RootModuleMetadata} from "../decorators/module";
 import {FakeIncomingMessage, FakeServerResponse} from "../helpers/mocks";
-import {Context} from "aws-lambda";
 import {LAMBDA_CONTEXT, LAMBDA_EVENT} from "./constants";
 import {ServerError} from "@typeix/router";
-
 
 /**
  * @since 2.1.0
@@ -45,7 +43,7 @@ export function lambdaServer(Class: Function) {
   let injector = moduleInjector.getInjector(Class);
   let logger: Logger = injector.get(Logger);
   logger.info("Module.info: Lambda Server started");
-  return async (event: any, context: Context, callback: any) => {
+  return async (event: any, context: any, callback: any) => {
     logger.debug(LAMBDA_EVENT + "_" + context.awsRequestId, event);
     logger.debug(LAMBDA_CONTEXT + "_" + context.awsRequestId, context);
     injector.set(LAMBDA_EVENT, event);
