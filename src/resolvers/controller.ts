@@ -359,13 +359,15 @@ export class ControllerResolver {
       if (isDefined(paramByIndex)) {
         return paramByIndex.metadataValue;
       }
+      let name = "typeix:@Inject";
       return {
-        name: "typeix:@Inject",
+        name: name,
         key: mappedAction.targetKey,
         args: {
           isMutable: false,
           value: item
         },
+        identifier: name + ":" + (isDefined(mappedAction.targetKey) ? mappedAction.targetKey.toString() : "constructor") + ":" +  index,
         paramIndex: index
       }
     });
@@ -385,8 +387,10 @@ export class ControllerResolver {
                 mappedAction: IMetadata): string | Buffer {
     // get controller instance
     let controllerInstance = injector.get(controllerProvider.provide);
+    // search for mapped action in prototype
+    let proto = Object.getPrototypeOf(controllerInstance);
     // get action
-    let action = controllerInstance[mappedAction.targetKey].bind(controllerInstance);
+    let action = proto[mappedAction.targetKey].bind(controllerInstance);
     // content type
     let contentType: IMetadataValue = this.getDecoratorByMappedAction(controllerProvider, mappedAction, "Produces");
 

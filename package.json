@@ -32,7 +32,7 @@
     "typescript": "^3.8.3"
   },
   "dependencies": {
-    "@typeix/di": "~2.3.0",
+    "@typeix/di": "~2.3.1",
     "@typeix/modules": "~2.3.0",
     "@typeix/router": "~2.3.0",
     "@typeix/utils": "~2.3.0"

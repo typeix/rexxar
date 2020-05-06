@@ -7,3 +7,4 @@ export {Produces} from "./produces";
 export {Provider} from "./provider";
 export {Module, RootModule, IModuleMetadata} from "./module";
 export {Controller, IControllerMetadata} from "./controller";
+export {LambdaEvent} from "./lambda";

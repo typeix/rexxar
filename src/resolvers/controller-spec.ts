@@ -268,6 +268,7 @@ describe("ControllerResolver", () => {
           "isMutable": false,
           "value": Logger
         },
+        "identifier": "typeix:@Inject:actionIndex:1",
         "key": "actionIndex",
         "name": "typeix:@Inject",
         "paramIndex": 1
@@ -285,6 +286,7 @@ describe("ControllerResolver", () => {
           "isMutable": false,
           "value": Logger
         },
+        "identifier": "typeix:@Inject:actionIndex:3",
         "key": "actionIndex",
         "name": "typeix:@Inject",
         "paramIndex": 3
@@ -306,6 +308,7 @@ describe("ControllerResolver", () => {
           "isMutable": false,
           "value": Logger
         },
+        "identifier": "typeix:@Inject:actionIndex:6",
         "key": "actionIndex",
         "name": "typeix:@Inject",
         "paramIndex": 6
@@ -315,6 +318,7 @@ describe("ControllerResolver", () => {
           "isMutable": false,
           "value": Object
         },
+        "identifier": "typeix:@Inject:actionIndex:7",
         "key": "actionIndex",
         "name": "typeix:@Inject",
         "paramIndex": 7

@@ -16,7 +16,8 @@ export {
   Filter,
   Param,
   Produces,
-  Provider
+  Provider,
+  LambdaEvent
 } from "./decorators/index";
 
 export {
