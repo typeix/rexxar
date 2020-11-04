@@ -1,11 +1,13 @@
-import {MODULE_METADATA_KEY, ModuleInjector} from "@typeix/modules";
-import {getMetadataArgs} from "../helpers/metadata";
-import {isString, Logger} from "@typeix/utils";
+import {ModuleInjector} from "@typeix/modules";
+import {isString} from "@typeix/utils";
 import {fireRequest} from "../resolvers/request";
-import {BOOTSTRAP_MODULE, RootModuleMetadata} from "../decorators/module";
+import {BOOTSTRAP_MODULE, RootModule, RootModuleMetadata} from "../decorators/module";
 import {FakeIncomingMessage, FakeServerResponse} from "../helpers/mocks";
 import {LAMBDA_CONTEXT, LAMBDA_EVENT} from "./constants";
-import {ServerError} from "@typeix/router";
+import {RouterError} from "@typeix/router";
+import {getClassMetadata} from "@typeix/metadata";
+import {Logger} from "log4js";
+import {LOGGER} from "../index";
 
 /**
  * @since 2.1.0
@@ -35,13 +37,13 @@ function isProxyEvent(event: any): boolean {
  * Use httpsServer function to https an Module.
  */
 export function lambdaServer(Class: Function) {
-  let metadata: RootModuleMetadata = getMetadataArgs(Class, MODULE_METADATA_KEY);
+  let metadata: RootModuleMetadata = getClassMetadata(RootModule, Class)?.args;
   if (metadata.name != BOOTSTRAP_MODULE) {
-    throw new ServerError(500, "Server must be initialized on @RootModule")
+    throw new RouterError(500, "Server must be initialized on @RootModule", metadata);
   }
   let moduleInjector = ModuleInjector.createAndResolve(Class, metadata.shared_providers);
   let injector = moduleInjector.getInjector(Class);
-  let logger: Logger = injector.get(Logger);
+  let logger: Logger = injector.get(LOGGER);
   logger.info("Module.info: Lambda Server started");
   return async (event: any, context: any, callback: any) => {
     logger.debug(LAMBDA_EVENT + "_" + context.awsRequestId, event);

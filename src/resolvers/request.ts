@@ -6,24 +6,21 @@ import {
   isObject,
   isString,
   isTruthy,
-  Logger,
   uuid
 } from "@typeix/utils";
-import {IResolvedRoute, RestMethods, Router, ServerError, StatusCodes} from "@typeix/router";
+import {IResolvedRoute, HttpMethod, Router, RouterError, toHttpMethod} from "@typeix/router"
+import {ModuleInjector} from "@typeix/modules";
 import {IncomingMessage, OutgoingHttpHeaders, ServerResponse} from "http";
 import {EventEmitter} from "events";
 import {parse, Url} from "url";
 import {IRedirect} from "../interfaces";
 import {ControllerResolver} from "./controller";
-import {MODULE_METADATA_KEY, ModuleInjector} from "@typeix/modules";
-import {IControllerMetadata, IModuleMetadata} from "..";
-import {getMetadataArgs} from "../helpers/metadata";
+import {Controller, IControllerMetadata, IModuleMetadata, LOGGER, Module} from "..";
 import {BOOTSTRAP_MODULE} from "../decorators/module";
 import {LAMBDA_CONTEXT, LAMBDA_EVENT} from "../servers";
+import {getClassMetadata} from "@typeix/metadata";
+import {Logger} from "log4js";
 
-
-export const REQUEST_MODULE_KEY = "typeix:rexxar:@Injector:module";
-export const REQUEST_ERROR_KEY = "typeix:rexxar:@Injector:error";
 /**
  * @since 1.0.0
  * @enum
@@ -96,10 +93,10 @@ export function fireRequest(moduleInjector: ModuleInjector,
   let moduleList = <Array<{ token: any, metadata: any }>>moduleInjector.getAllMetadata();
   let rootModuleMetadata = moduleList.find(item => item.metadata.name === BOOTSTRAP_MODULE);
   if (!isDefined(rootModuleMetadata)) {
-    return Promise.reject(new ServerError(500, "@RootModule is not defined"))
+    return Promise.reject(new RouterError(500, "@RootModule is not defined", rootModuleMetadata))
   }
   let rootInjector: Injector = moduleInjector.getInjector(rootModuleMetadata.token);
-  let logger = rootInjector.get(Logger);
+  let logger = rootInjector.get(LOGGER);
   /**
    * Create RequestResolver injector
    */
@@ -111,7 +108,7 @@ export function fireRequest(moduleInjector: ModuleInjector,
       {provide: "UUID", useValue: uuid()},
       {provide: "data", useValue: []},
       {provide: "contentType", useValue: "text/html"},
-      {provide: "statusCode", useValue: StatusCodes.OK},
+      {provide: "statusCode", useValue: 200},
       {provide: "request", useValue: request},
       {provide: "response", useValue: response},
       {provide: ModuleInjector, useValue: moduleInjector},
@@ -231,7 +228,7 @@ export class RequestResolver implements IAfterConstruct {
    * ControllerResolver status code default 200
    */
   @Inject("statusCode", true)
-  private statusCode: StatusCodes;
+  private statusCode: number;
 
   /**
    * @param {String} contentType
@@ -267,17 +264,17 @@ export class RequestResolver implements IAfterConstruct {
   static getControllerProvider(resolvedModule: IResolvedModule): IProvider {
 
     let provider: IProvider = verifyProvider(resolvedModule.module.token);
-    let moduleMetadata: IModuleMetadata = getMetadataArgs(provider.provide, MODULE_METADATA_KEY);
+    let moduleMetadata: IModuleMetadata = getClassMetadata(Module, provider.provide)?.args;
 
     let controllerProvider: IProvider = moduleMetadata.controllers
       .map(item => verifyProvider(item))
       .find((Class: IProvider) => {
-        let metadata: IControllerMetadata = getMetadataArgs(Class.provide, "Controller");
+        let metadata: IControllerMetadata = getClassMetadata(Controller, Class.provide)?.args;
         return metadata.name === resolvedModule.controller;
       });
     if (!isDefined(controllerProvider)) {
-      throw new ServerError(
-        StatusCodes.Bad_Request,
+      throw new RouterError(
+        400,
         `You must define controller within current route: ${resolvedModule.resolvedRoute.route}`, {
           actionName: resolvedModule.action,
           controllerName: resolvedModule.controller,
@@ -317,9 +314,9 @@ export class RequestResolver implements IAfterConstruct {
    */
   async processError(data: any, isCustom: boolean): Promise<Buffer | string> {
     // force HttpError to be thrown
-    if (!(data instanceof ServerError)) {
+    if (!(data instanceof RouterError)) {
       let _error: Error = data;
-      data = new ServerError(StatusCodes.Internal_Server_Error, _error.message, {});
+      data = new RouterError(500, _error.message, {});
       data.stack = _error.stack;
     }
     // log error message
@@ -341,15 +338,15 @@ export class RequestResolver implements IAfterConstruct {
 
       let route: string;
 
-      if (this.injector.has(REQUEST_MODULE_KEY)) {
-        let iResolvedModule: IResolvedModule = this.injector.get(REQUEST_MODULE_KEY);
+      if (this.injector.has(Module.toString())) {
+        let iResolvedModule: IResolvedModule = this.injector.get(Module.toString());
         route = this.router.getError(iResolvedModule.module.metadata.name);
       } else {
         route = this.router.getError();
       }
 
       let iResolvedErrorModule = this.getResolvedModule({
-        method: RestMethods.GET,
+        method: HttpMethod.GET,
         params: {},
         route
       });
@@ -360,7 +357,7 @@ export class RequestResolver implements IAfterConstruct {
 
     }
 
-    return Logger.clean(data.toString());
+    return data.toString();
   }
 
   /**
@@ -400,7 +397,7 @@ export class RequestResolver implements IAfterConstruct {
             response: response,
             type: typeof response
           });
-          throw new ServerError(StatusCodes.Bad_Request, "ResponseType must be string or buffer", {
+          throw new RouterError(400, "ResponseType must be string or buffer", {
             response
           });
         }
@@ -441,7 +438,7 @@ export class RequestResolver implements IAfterConstruct {
    * @description
    * Resolve route and deliver resolved module
    */
-  processModule(resolvedModule: IResolvedModule, error?: ServerError): Promise<string | Buffer> {
+  processModule(resolvedModule: IResolvedModule, error?: RouterError): Promise<string | Buffer> {
 
     let providers = [
       {provide: "data", useValue: this.data},
@@ -453,7 +450,7 @@ export class RequestResolver implements IAfterConstruct {
       {provide: "actionName", useValue: resolvedModule.action},
       {provide: "resolvedRoute", useValue: resolvedModule.resolvedRoute},
       {provide: "isChainStopped", useValue: false},
-      {provide: REQUEST_ERROR_KEY, useValue: isTruthy(error) ? error : new ServerError(500)},
+      {provide: RouterError.toString(), useValue: isTruthy(error) ? error : new RouterError(500, "", {})},
       {provide: EventEmitter, useValue: this.eventEmitter}
     ];
     /**
@@ -491,7 +488,7 @@ export class RequestResolver implements IAfterConstruct {
     let [module, controller, action] = resolvedRoute.route.split("/");
     let iModule: IModule = !isDefined(action) ? this.getModule(BOOTSTRAP_MODULE) : this.getModule(module);
     if (isFalsy(iModule)) {
-      throw new ServerError(
+      throw new RouterError(
         500,
         "Module with route " + resolvedRoute.route + " is not registered in system," +
         " please check your route configuration!",
@@ -520,7 +517,7 @@ export class RequestResolver implements IAfterConstruct {
 
     // process request
     return this.router
-      .parseRequest(this.url.pathname, this.request.method, this.request.headers)
+      .parseRequest(this.url.pathname, toHttpMethod(this.request.method), this.request.headers)
       .then((resolvedRoute: IResolvedRoute) => {
 
         this.logger.debug("Route.parseRequest", {
@@ -542,7 +539,7 @@ export class RequestResolver implements IAfterConstruct {
         /**
          * ON POST, PATCH, PUT process body
          */
-        if ([RestMethods.POST, RestMethods.PATCH, RestMethods.PUT].indexOf(resolvedRoute.method) > -1) {
+        if ([HttpMethod.POST, HttpMethod.PATCH, HttpMethod.PUT].indexOf(resolvedRoute.method) > -1) {
           this.request.on("data", item => this.data.push(<Buffer>item));
           return new Promise((resolve, reject) => {
             this.request.on("error", reject.bind(this));
@@ -554,7 +551,7 @@ export class RequestResolver implements IAfterConstruct {
       })
       .then((resolvedRoute: IResolvedRoute) => {
         let resolvedModule = this.getResolvedModule(resolvedRoute);
-        this.injector.set(REQUEST_MODULE_KEY, resolvedModule);
+        this.injector.set(Module.toString(), resolvedModule);
         this.injector.set("resolvedRoute", resolvedRoute);
         return resolvedModule;
       })

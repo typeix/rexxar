@@ -1,10 +1,26 @@
 import {fakeHttpServer, FakeResponseApi, FakeServerApi} from "../helpers/mocks";
-import {Action, Before, Chain, Controller, ErrorMessage, Module} from "..";
+import {Action, Before, Chain, Controller, ErrorMessage, LOGGER, Module} from "..";
 import {Request} from "./controller";
 import {IAfterConstruct, Inject} from "@typeix/di";
-import {Logger, LogLevels} from "@typeix/utils";
-import {RestMethods, Router, ServerError, StatusCodes} from "@typeix/router";
+import {HttpMethod, Router, RouterError} from "@typeix/router";
 import {BOOTSTRAP_MODULE} from "../decorators/module";
+import * as log4js from "log4js";
+
+
+
+const LoggerProvider = {
+  provide: LOGGER,
+  useFactory: () => {
+    return log4js.configure({
+      appenders: {
+        out: {type: 'stdout', layout: {type: 'json', separator: ','}}
+      },
+      categories: {
+        default: {appenders: ['out'], level: 'info'}
+      }
+    }).getLogger();
+  }
+};
 
 describe("fakeHttpServer", () => {
 
@@ -22,14 +38,14 @@ describe("fakeHttpServer", () => {
 
 
       @Action("error")
-      actionError(@ErrorMessage message: ServerError) {
+      actionError(@ErrorMessage() message: RouterError) {
         return "ERROR=" + message.getMessage() + "=" + this.request.getRoute();
       }
 
 
       @Action("fire")
       actionFireError() {
-        throw new ServerError(500, "FIRE ERROR CASE");
+        throw new RouterError(500, "FIRE ERROR CASE", {});
       }
 
       @Before("index")
@@ -38,7 +54,7 @@ describe("fakeHttpServer", () => {
       }
 
       @Action("index")
-      actionIndex(@Chain data) {
+      actionIndex(@Chain() data) {
         return "VALUE <- " + data;
       }
 
@@ -49,47 +65,44 @@ describe("fakeHttpServer", () => {
 
       @Action("redirect")
       actionRedirect() {
-        return this.request.redirectTo("/mypage", StatusCodes.Temporary_Redirect);
+        return this.request.redirectTo("/mypage", 301);
       }
     }
 
     @Module({
       name: BOOTSTRAP_MODULE,
-      providers: [Logger, Router],
+      providers: [LoggerProvider, Router],
       controllers: [MyController]
     })
     class MyModule implements IAfterConstruct {
       afterConstruct(): void {
         this.router.addRules([
           {
-            methods: [RestMethods.GET, RestMethods.OPTIONS, RestMethods.CONNECT, RestMethods.DELETE, RestMethods.HEAD, RestMethods.TRACE],
+            methods: [HttpMethod.GET, HttpMethod.OPTIONS, HttpMethod.CONNECT, HttpMethod.DELETE, HttpMethod.HEAD, HttpMethod.TRACE],
             url: "/",
             route: "core/index"
           },
           {
-            methods: [RestMethods.POST, RestMethods.PUT, RestMethods.PATCH],
+            methods: [HttpMethod.POST, HttpMethod.PUT, HttpMethod.PATCH],
             url: "/ajax/call",
             route: "core/call"
           },
           {
-            methods: [RestMethods.GET],
+            methods: [HttpMethod.GET],
             url: "/redirect",
             route: "core/redirect"
           },
           {
-            methods: [RestMethods.GET],
+            methods: [HttpMethod.GET],
             url: "/fire-error",
             route: "core/fire"
           }
         ]);
         this.router.setError("core/error");
-        this.logger.printToConsole();
-        this.logger.enable();
-        this.logger.setDebugLevel(LogLevels.BENCHMARK);
       }
 
-      @Inject(Logger)
-      private logger: Logger;
+      @Inject(LOGGER)
+      private logger: log4js.Logger;
 
       @Inject(Router)
       private router: Router;
@@ -135,7 +148,7 @@ describe("fakeHttpServer", () => {
   it("Should do OPTIONS index", (done) => {
     server.OPTIONS("/").then((api: FakeResponseApi) => {
       expect(api.getBody().toString()).toBe("VALUE <- BEFORE");
-      expect(api.getStatusCode()).toBe(StatusCodes.OK);
+      expect(api.getStatusCode()).toBe(200);
       done();
     }).catch(done);
   });

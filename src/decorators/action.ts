@@ -1,31 +1,4 @@
-import {defineMetadata, IMetadataValue} from "@typeix/di";
-import {isObject} from "@typeix/utils";
-
-/**
- * Action mapping
- * @param type
- * @param value
- * @returns {(Class: Function, key: (string | symbol), descriptor: PropertyDescriptor) => any}
- */
-let map = (type, value?: any): MethodDecorator => {
-  return (Class: Function, key: string | symbol, descriptor: PropertyDescriptor): any => {
-    let METADATA_KEY = "typeix:rexxar:@" + type;
-    let metadata: IMetadataValue = {
-      args: {
-        type,
-        value
-      },
-      key,
-      name: METADATA_KEY
-    };
-    defineMetadata(METADATA_KEY, metadata, Class, key);
-    if (isObject(descriptor)) {
-      descriptor.configurable = false;
-      descriptor.writable = false;
-    }
-    return Class;
-  };
-};
+import {createMethodDecorator} from "@typeix/metadata";
 
 /**
  * Action decorator
@@ -36,7 +9,10 @@ let map = (type, value?: any): MethodDecorator => {
  * @description
  * Before each action
  */
-export let BeforeEach: MethodDecorator = map("BeforeEach", null);
+
+export function BeforeEach() {
+  return createMethodDecorator(BeforeEach);
+}
 
 /**
  * Action decorator
@@ -47,46 +23,48 @@ export let BeforeEach: MethodDecorator = map("BeforeEach", null);
  * @description
  * After each action
  */
-export let AfterEach: MethodDecorator = map("AfterEach", null);
+export function AfterEach() {
+  return createMethodDecorator(AfterEach);
+}
 /**
  * Action decorator
  * @decorator
  * @function
  * @name Action
  *
- * @param {String} value
+ * @param {String} name
  *
  * @description
  * Define name of action to class
  */
-export let Action = (value: string): MethodDecorator => {
-  return map("Action", value);
-};
+export function Action(name: string) {
+  return createMethodDecorator(Action, {name});
+}
 /**
  * Before Action decorator
  * @decorator
  * @function
  * @name Before
  *
- * @param {String} value
+ * @param {String} name
  *
  * @description
  * Define name of before action to class
  */
-export let Before = (value: string): MethodDecorator => {
-  return map("Before", value);
-};
+export function Before(name: string) {
+  return createMethodDecorator(Action, {name});
+}
 /**
  * After Action decorator
  * @decorator
  * @function
  * @name After
  *
- * @param {String} value
+ * @param {String} name
  *
  * @description
  * Define name of after action to class
  */
-export let After = (value: string): MethodDecorator => {
-  return map("After", value);
-};
+export function After(name: string) {
+  return createMethodDecorator(Action, {name});
+}

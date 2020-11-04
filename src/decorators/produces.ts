@@ -1,7 +1,5 @@
-import {defineMetadata, IMetadataValue} from "@typeix/di";
-import {isObject} from "@typeix/utils";
+import {createMethodDecorator} from "@typeix/metadata";
 
-export let PRODUCES_METADATA_KEY = "typeix:rexxar:@Produces";
 /**
  * Produces response type
  * @decorator
@@ -13,20 +11,6 @@ export let PRODUCES_METADATA_KEY = "typeix:rexxar:@Produces";
  * @description
  * Produces content type
  */
-export let Produces = (value: string): MethodDecorator => {
-  return (Class: Function, key: string | symbol, descriptor: PropertyDescriptor): any => {
-    let metadata: IMetadataValue = {
-      args: {
-        value
-      },
-      key,
-      name: PRODUCES_METADATA_KEY
-    };
-    defineMetadata(PRODUCES_METADATA_KEY, metadata, Class, key);
-    if (isObject(descriptor)) {
-      descriptor.configurable = false;
-      descriptor.writable = false;
-    }
-    return Class;
-  };
-};
+export function Produces(value: string): MethodDecorator {
+  return createMethodDecorator(Produces, {value});
+}

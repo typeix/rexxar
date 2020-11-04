@@ -1,10 +1,4 @@
-import {defineMetadata, IMetadataValue} from "@typeix/di";
-
-/**
- * metadata key
- * @type {string}
- */
-export const FILTER_METADATA_KEY = "typeix:rexxar:@Filter";
+import {createClassDecorator} from "@typeix/metadata";
 
 /**
  * @since 1.0.0
@@ -36,16 +30,6 @@ export const FILTER_METADATA_KEY = "typeix:rexxar:@Filter";
  *}
  */
 
-export let Filter = (priority: number, route: string = "*"): ClassDecorator => {
-  return (Class: Function): any => {
-    let metadata: IMetadataValue = {
-      args: {
-        priority,
-        route
-      },
-      name: FILTER_METADATA_KEY
-    };
-    defineMetadata(FILTER_METADATA_KEY, metadata, Class);
-    return Class;
-  };
+export function Filter(priority: number, route: string = "*") {
+  return createClassDecorator(Filter, {priority, route});
 }

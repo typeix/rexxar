@@ -3,13 +3,11 @@ import {EventEmitter} from "events";
 import {Url} from "url";
 import {
   getProviderName,
-  IMetadataValue,
   Inject,
   Injectable,
   Injector,
   IProvider,
-  verifyProviders,
-  IMetadata
+  verifyProviders
 } from "@typeix/di";
 import {
   isArray,
@@ -18,26 +16,30 @@ import {
   isFalsy,
   isNumber,
   isString,
-  isTruthy,
-  Logger
+  isTruthy
 } from "@typeix/utils";
-import {fromRestMethod, IResolvedRoute, RestMethods, ServerError, StatusCodes} from "@typeix/router";
+import {toHttpMethod, IResolvedRoute, HttpMethod, RouterError} from "@typeix/router";
 import {IConnection} from "../interfaces";
-import {REQUEST_ERROR_KEY} from "./request";
 import {
-  getAllMetadataByDecorator,
-  getDecorator,
-  getMetadataArgs,
-  getMetadataByTargetKey,
-  getMetadataValue
-} from "../helpers/metadata";
-import {IControllerMetadata} from "../decorators";
-import {CHAIN_METADATA_KEY} from "../decorators/chain";
-import {PARAM_METADATA_KEY} from "../decorators/param";
-import {ERROR_MESSAGE_METADATA_KEY} from "../decorators/error";
-
-
-const TX_PARAMS = "design:paramtypes";
+  Action, After, AfterEach, Before,
+  BeforeEach,
+  Chain,
+  Controller,
+  ErrorMessage,
+  Filter,
+  IControllerMetadata,
+  Param,
+  Produces
+} from "../decorators";
+import {Logger} from "log4js";
+import {
+  getClassMetadata,
+  getMetadataForTarget,
+  getMethodMetadata,
+  IMetadata,
+  TS_PARAMS
+} from "@typeix/metadata";
+import {LOGGER} from "../index";
 
 
 /**
@@ -97,7 +99,7 @@ export class ControllerResolver {
    * @description
    * Provided by injector
    */
-  @Inject(Logger)
+  @Inject(LOGGER)
   private logger: Logger;
   /**
    * @param {EventEmitter} eventEmitter
@@ -154,7 +156,7 @@ export class ControllerResolver {
   /**
    * @since 1.0.0
    * @function
-   * @name Request#isControllerPrototypeOf
+   * @name Request#isControllerInherited
    * @private
    * @description
    * Validate controller inheritance
@@ -287,10 +289,10 @@ export class ControllerResolver {
    * @description
    * Check if controller has mapped action
    */
-  hasMappedAction(controllerProvider: IProvider, actionName: String, name: string = "Action"): boolean {
+  hasMappedAction(controllerProvider: IProvider, actionName: String, decorator: Function = Action): boolean {
     return isDefined(
-      getAllMetadataByDecorator(controllerProvider.provide.prototype, name)
-        .find(item => item.metadataValue.args.value === actionName)
+      getMetadataForTarget(controllerProvider.provide)
+        .find(item => item.decorator === decorator && item?.args?.name === actionName)
     );
   }
 
@@ -302,14 +304,13 @@ export class ControllerResolver {
    * @description
    * Returns a mapped action metadata
    */
-  getMappedAction(controllerProvider: IProvider, actionName: String, name: string = "Action"): IMetadata {
+  getMappedAction(controllerProvider: IProvider, actionName: string, decorator: Function = Action): IMetadata {
     // get mappings from controller
-    let mappedAction = getAllMetadataByDecorator(controllerProvider.provide.prototype, name)
-      .find(item => item.metadataValue.args.value === actionName);
+    let mappedAction = getMethodMetadata(decorator, controllerProvider.provide, actionName);
     // check if action is present
     if (!isDefined(mappedAction)) {
-      throw new ServerError(
-        StatusCodes.Bad_Request,
+      throw new RouterError(
+        400,
         `@${name}("${actionName}") is not defined on controller ${getProviderName(controllerProvider.provide)}`,
         {
           actionName,
@@ -325,52 +326,18 @@ export class ControllerResolver {
   /**
    * @since 1.0.0
    * @function
-   * @name Request#getDecoratorByMappedAction
-   * @private
-   * @description
-   * Get param decorator by mapped action
-   */
-  getDecoratorByMappedAction(controllerProvider: IProvider, mappedAction: IMetadata, paramName: string): IMetadataValue {
-
-    return getMetadataValue(
-      controllerProvider.provide.prototype,
-      paramName,
-      mappedAction.targetKey
-    );
-  }
-
-  /**
-   * @since 1.0.0
-   * @function
    * @name Request#getMappedActionArguments
    * @private
    * @description
    * Get list of action arguments
    */
-  getMappedActionArguments(controllerProvider: IProvider, mappedAction: IMetadata): Array<IMetadataValue> {
+  getMappedActionArguments(controllerProvider: IProvider, mappedAction: IMetadata): Array<IMetadata> {
     // get mappings from controller
-    let metadataList = getMetadataByTargetKey(
-      controllerProvider.provide.prototype,
-      mappedAction.targetKey
+    return getMetadataForTarget(controllerProvider.provide, mappedAction.propertyKey).filter(
+      item =>
+        item.metadataKey === TS_PARAMS ||
+        item.decorator === Inject
     );
-    let paramTypes: Array<any> = metadataList.find(item => item.metadataKey == getDecorator(TX_PARAMS)).metadataValue;
-    return paramTypes.map((item, index) => {
-      let paramByIndex = metadataList.find(cItem => isDefined(cItem.metadataValue) ? cItem.metadataValue.paramIndex === index : false);
-      if (isDefined(paramByIndex)) {
-        return paramByIndex.metadataValue;
-      }
-      let name = "typeix:@Inject";
-      return {
-        name: name,
-        key: mappedAction.targetKey,
-        args: {
-          isMutable: false,
-          value: item
-        },
-        identifier: name + ":" + (isDefined(mappedAction.targetKey) ? mappedAction.targetKey.toString() : "constructor") + ":" +  index,
-        paramIndex: index
-      }
-    });
   }
 
 
@@ -390,48 +357,42 @@ export class ControllerResolver {
     // search for mapped action in prototype
     let proto = Object.getPrototypeOf(controllerInstance);
     // get action
-    let action = proto[mappedAction.targetKey].bind(controllerInstance);
+    let action = proto[mappedAction.propertyKey].bind(controllerInstance);
     // content type
-    let contentType: IMetadataValue = this.getDecoratorByMappedAction(controllerProvider, mappedAction, "Produces");
+    let contentType: IMetadata = getMethodMetadata(Produces, controllerProvider.provide, <string>mappedAction.propertyKey);
 
     if (isDefined(contentType)) {
-      this.getEventEmitter().emit("contentType", contentType.args.value);
+      this.getEventEmitter().emit("contentType", contentType?.args?.value);
     }
     // resolve action params
     let actionParams = [];
-    let params: Array<IMetadataValue> = this.getMappedActionArguments(controllerProvider, mappedAction);
+    let metadata: Array<IMetadata> = this.getMappedActionArguments(controllerProvider, mappedAction);
 
-    if (isDefined(params)) {
-      // make sure params are sorted correctly :)
-      params.sort((a, b) => {
-        if (a.paramIndex > b.paramIndex) {
-          return 1;
-        } else if (a.paramIndex < b.paramIndex) {
-          return -1;
+    if (isArray(metadata)) {
+      let paramIndex = metadata.findIndex(item => item.metadataKey === TS_PARAMS);
+      if (isDefined(paramIndex) && isNumber(paramIndex)) {
+        actionParams = metadata.splice(paramIndex, 1);
+        for (let item of metadata) {
+          switch (item.decorator) {
+            case Param:
+              if (isDefined(this.resolvedRoute.params) && this.resolvedRoute.params.hasOwnProperty(item.args.value)) {
+                actionParams.splice(item.paramIndex, 1, this.resolvedRoute.params[item.args.value]);
+              } else {
+                actionParams.splice(item.paramIndex, 1, null);
+              }
+              break;
+            case Chain:
+              actionParams.splice(item.paramIndex, 1, injector.get(Chain.toString()));
+              break;
+            case Inject:
+              actionParams.splice(item.paramIndex, 1, injector.get(item.args.token));
+              break;
+            case ErrorMessage:
+              actionParams.splice(item.paramIndex, 1, injector.get(ErrorMessage.toString()));
+              break;
+          }
         }
-        return 0;
-      });
-      // push action params
-      params.forEach(param => {
-        switch (param.name) {
-          case PARAM_METADATA_KEY:
-            if (isDefined(this.resolvedRoute.params) && this.resolvedRoute.params.hasOwnProperty(param.args.value)) {
-              actionParams.push(this.resolvedRoute.params[param.args.value]);
-            } else {
-              actionParams.push(null);
-            }
-            break;
-          case CHAIN_METADATA_KEY:
-            actionParams.push(injector.get(CHAIN_METADATA_KEY));
-            break;
-          case "typeix:@Inject":
-            actionParams.push(injector.get(param.args.value));
-            break;
-          case ERROR_MESSAGE_METADATA_KEY:
-            actionParams.push(injector.get(REQUEST_ERROR_KEY));
-            break;
-        }
-      });
+      }
     }
 
     return action.apply(controllerInstance, actionParams);
@@ -440,7 +401,7 @@ export class ControllerResolver {
   /**
    * @since 1.0.0
    * @function
-   * @name Request#processControllerFilters
+   * @name Request#processFilters
    * @private
    * @description
    * Process controller filters
@@ -450,7 +411,7 @@ export class ControllerResolver {
                        isAfter: boolean): Promise<any> {
 
     let filters = verifyProviders(metadata.filters).filter(item => {
-      let filterMetadata = getMetadataArgs(item.provide, "Filter");
+      let filterMetadata = getClassMetadata(Filter, item.provide)?.args;
       if (isDefined(filterMetadata)) {
         return (
           filterMetadata.route === "*" ||
@@ -461,8 +422,8 @@ export class ControllerResolver {
       return false;
     })
       .sort((aItem, bItem) => {
-        let a: any = getMetadataArgs(aItem.provide, "Filter");
-        let b: any = getMetadataArgs(bItem.provide, "Filter");
+        let a: any = getClassMetadata(Filter, aItem.provide)?.args;
+        let b: any = getClassMetadata(Filter, bItem.provide)?.args;
         if (a.priority > b.priority) {
           return -1;
         } else if (a.priority < b.priority) {
@@ -470,6 +431,7 @@ export class ControllerResolver {
         }
         return 0;
       });
+    let chainId = Chain.toString();
 
     for (let provider of filters) {
       let filterInjector = Injector.createAndResolveChild(injector, provider, []);
@@ -478,13 +440,13 @@ export class ControllerResolver {
       if (isFalsy(this.isChainStopped)) {
         if (!isAfter) {
           let start = Date.now();
-          let result = await filter.before(injector.get(CHAIN_METADATA_KEY));
-          injector.set(CHAIN_METADATA_KEY, result);
+          let result = await filter.before(injector.get(chainId));
+          injector.set(chainId, result);
           this.benchmark(`Filter.before: ${getProviderName(filter, "on filter ")}`, start);
         } else {
           let start = Date.now();
-          let result = await filter.after(injector.get(CHAIN_METADATA_KEY));
-          injector.set(CHAIN_METADATA_KEY, result);
+          let result = await filter.after(injector.get(chainId));
+          injector.set(chainId, result);
           this.benchmark(`Filter.after: ${getProviderName(filter, "on filter ")}`, start);
         }
       }
@@ -492,7 +454,7 @@ export class ControllerResolver {
       filterInjector.destroy();
     }
 
-    return await injector.get(CHAIN_METADATA_KEY);
+    return injector.get(chainId);
   }
 
   /**
@@ -505,9 +467,9 @@ export class ControllerResolver {
    */
   async processController(reflectionInjector: Injector,
                           controllerProvider: IProvider,
-                          actionName: String): Promise<any> {
+                          actionName: string): Promise<any> {
     // get controller metadata
-    let metadata = getMetadataArgs(controllerProvider.provide, "Controller");
+    let metadata = getClassMetadata(Controller, controllerProvider.provide)?.args;
     let providers: Array<IProvider> = verifyProviders(metadata.providers);
     // limit controller api
     let limitApi = ["request", "response", "controllerProvider", "modules"];
@@ -515,7 +477,7 @@ export class ControllerResolver {
     // benchmark
     let requestStart = Date.now();
     // create controller injector
-    let injector = new Injector(reflectionInjector, [CHAIN_METADATA_KEY]);
+    let injector = new Injector(reflectionInjector, [Chain.toString()]);
 
     // initialize controller
     injector.createAndResolve(
@@ -524,36 +486,36 @@ export class ControllerResolver {
     );
 
     // set default chain key
-    injector.set(CHAIN_METADATA_KEY, null);
+    injector.set(Chain.toString(), null);
 
     // process filters
     if (isArray(metadata.filters)) {
       // set filter result
-      injector.set(CHAIN_METADATA_KEY, await this.processFilters(injector, metadata, false));
+      injector.set(Chain.toString(), await this.processFilters(injector, metadata, false));
     }
 
     // process @BeforeEach action
-    if (this.hasMappedAction(controllerProvider, null, "BeforeEach") && isFalsy(this.isChainStopped)) {
+    if (this.hasMappedAction(controllerProvider, null, BeforeEach) && isFalsy(this.isChainStopped)) {
       let start = Date.now();
       let result = await this.processAction(
         injector,
         controllerProvider,
-        this.getMappedAction(controllerProvider, null, "BeforeEach")
+        this.getMappedAction(controllerProvider, null, BeforeEach)
       );
 
-      injector.set(CHAIN_METADATA_KEY, result);
+      injector.set(Chain.toString(), result);
       this.benchmark("BeforeEach", start);
     }
 
     // process @Before action
-    if (this.hasMappedAction(controllerProvider, actionName, "Before") && isFalsy(this.isChainStopped)) {
+    if (this.hasMappedAction(controllerProvider, actionName, Before) && isFalsy(this.isChainStopped)) {
       let start = Date.now();
       let result = await this.processAction(
         injector,
         controllerProvider,
-        this.getMappedAction(controllerProvider, actionName, "Before")
+        this.getMappedAction(controllerProvider, actionName, Before)
       );
-      injector.set(CHAIN_METADATA_KEY, result);
+      injector.set(Chain.toString(), result);
       this.benchmark("Before", start);
     }
 
@@ -565,43 +527,43 @@ export class ControllerResolver {
         controllerProvider,
         this.getMappedAction(controllerProvider, actionName)
       );
-      injector.set(CHAIN_METADATA_KEY, result);
+      injector.set(Chain.toString(), result);
       this.benchmark("Action", start);
     }
 
     // process @After action
-    if (this.hasMappedAction(controllerProvider, actionName, "After") && isFalsy(this.isChainStopped)) {
+    if (this.hasMappedAction(controllerProvider, actionName, After) && isFalsy(this.isChainStopped)) {
       let start = Date.now();
       let result = await this.processAction(
         injector,
         controllerProvider,
-        this.getMappedAction(controllerProvider, actionName, "After")
+        this.getMappedAction(controllerProvider, actionName, After)
       );
-      injector.set(CHAIN_METADATA_KEY, result);
+      injector.set(Chain.toString(), result);
       this.benchmark("After", start);
     }
 
     // process @AfterEach action
-    if (this.hasMappedAction(controllerProvider, null, "AfterEach") && isFalsy(this.isChainStopped)) {
+    if (this.hasMappedAction(controllerProvider, null, AfterEach) && isFalsy(this.isChainStopped)) {
       let start = Date.now();
       let result = await this.processAction(
         injector,
         controllerProvider,
-        this.getMappedAction(controllerProvider, null, "AfterEach")
+        this.getMappedAction(controllerProvider, null, AfterEach)
       );
-      injector.set(CHAIN_METADATA_KEY, result);
+      injector.set(Chain.toString(), result);
       this.benchmark("AfterEach", start);
     }
 
     if (isFalsy(this.isChainStopped) && isArray(metadata.filters)) {
       // set filter result
-      injector.set(CHAIN_METADATA_KEY, await this.processFilters(injector, metadata, true));
+      injector.set(Chain.toString(), await this.processFilters(injector, metadata, true));
     }
 
     this.benchmark("Request", requestStart);
 
     // render action call
-    return await injector.get(CHAIN_METADATA_KEY);
+    return injector.get(Chain.toString());
   }
 
   /**
@@ -613,8 +575,8 @@ export class ControllerResolver {
    * Print benchmark
    */
   private benchmark(message: string, start: number) {
-    this.logger.benchmark(`${message}: ${(Date.now() - start)}ms`, {
-      method: fromRestMethod(this.resolvedRoute.method),
+    this.logger.trace(`${message}: ${(Date.now() - start)}ms`, {
+      method: toHttpMethod(this.resolvedRoute.method),
       route: this.resolvedRoute.route,
       url: this.request.url
     });
@@ -875,7 +837,7 @@ export class Request {
    * @description
    * Return resolved route method
    */
-  getMethod(): RestMethods {
+  getMethod(): HttpMethod {
     return this.resolvedRoute.method;
   }
 
@@ -911,7 +873,7 @@ export class Request {
    * @description
    * Set status code
    */
-  setStatusCode(code: StatusCodes | number) {
+  setStatusCode(code: number) {
     this.controllerResolver.getEventEmitter().emit("statusCode", code);
   }
 
@@ -935,7 +897,7 @@ export class Request {
    * @description
    * Stops action chain
    */
-  redirectTo(url: string, code: StatusCodes | number) {
+  redirectTo(url: string, code: number) {
     this.stopChain();
     this.controllerResolver.getEventEmitter().emit("redirectTo", {
       code, url

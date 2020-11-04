@@ -1,4 +1,3 @@
-import {StatusCodes} from "@typeix/router";
 
 
 /**
@@ -65,5 +64,5 @@ export interface IConnection {
  */
 export interface IRedirect {
   url: string;
-  code: StatusCodes;
+  code: number;
 }

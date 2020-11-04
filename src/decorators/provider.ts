@@ -1,11 +1,5 @@
-import {defineMetadata, IMetadataValue, UProvider, verifyProviders} from "@typeix/di";
-
-/**
- * metadata key
- * @type {string}
- */
-export const PROVIDER_METADATA_KEY = "typeix:rexxar:@Provider";
-
+import {createClassDecorator} from "@typeix/metadata";
+import {UProvider} from "@typeix/di";
 /**
  * @since 1.0.0
  * @decorator
@@ -26,13 +20,7 @@ export const PROVIDER_METADATA_KEY = "typeix:rexxar:@Provider";
  *    }
  * }
  */
-export let Provider = (config: Array<UProvider>): ClassDecorator => {
-  return (Class: Function): any => {
-    let metadata: IMetadataValue = {
-      args: verifyProviders(config),
-      name: PROVIDER_METADATA_KEY
-    };
-    defineMetadata(PROVIDER_METADATA_KEY, metadata, Class);
-    return Class;
-  };
+
+export function Provider(config: Array<UProvider>): ClassDecorator {
+  return createClassDecorator(Provider, {config});
 }

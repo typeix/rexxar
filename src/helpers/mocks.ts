@@ -2,15 +2,16 @@ import {Readable, Writable} from "stream";
 import {Socket} from "net";
 import {EventEmitter} from "events";
 import {IncomingMessage, ServerResponse} from "http";
-import {isArray, isObject, Logger, uuid} from "@typeix/utils";
+import {isArray, isObject, uuid} from "@typeix/utils";
 import {Inject, Injector, IProvider, verifyProvider} from "@typeix/di";
-import {MODULE_METADATA_KEY, ModuleInjector} from "@typeix/modules";
+import {ModuleInjector} from "@typeix/modules";
 import {ControllerResolver} from "../resolvers/controller";
-import {REQUEST_ERROR_KEY, fireRequest} from "../resolvers/request";
-import {IResolvedRoute, RestMethods, ServerError} from "@typeix/router";
-import {getMetadataArgs} from "./metadata";
-import {IControllerMetadata} from "../decorators";
+import {fireRequest} from "../resolvers/request";
+import {IResolvedRoute, HttpMethod, RouterError} from "@typeix/router";
+import {Controller, IControllerMetadata, RootModule} from "../decorators";
 import {BOOTSTRAP_MODULE, RootModuleMetadata} from "../decorators/module";
+import {getClassMetadata} from "@typeix/metadata";
+import {LOGGER} from "../index";
 
 
 export interface IFakeServerConfig {
@@ -29,9 +30,9 @@ export interface IFakeServerConfig {
  */
 
 export function fakeHttpServer(Class: Function, config?: IFakeServerConfig): FakeServerApi {
-  let metadata: RootModuleMetadata = getMetadataArgs(Class, MODULE_METADATA_KEY);
+  let metadata: RootModuleMetadata = getClassMetadata(RootModule, Class)?.args;
   if (metadata?.name != BOOTSTRAP_MODULE) {
-    throw new ServerError(500, "fakeHttpServer must be initialized on @RootModule")
+    throw new RouterError(500, "fakeHttpServer must be initialized on @RootModule", metadata);
   }
   let moduleInjector = ModuleInjector.createAndResolve(Class, isArray(metadata.shared_providers) ? metadata.shared_providers : []);
   let fakeServerInjector = Injector.createAndResolve(FakeServerApi, [
@@ -39,6 +40,7 @@ export function fakeHttpServer(Class: Function, config?: IFakeServerConfig): Fak
   ]);
   return fakeServerInjector.get(FakeServerApi);
 }
+
 /**
  * @since 1.0.0
  * @function
@@ -65,9 +67,9 @@ export function fakeControllerActionCall(injector: Injector,
   request.url = "/";
   let response = new FakeServerResponse();
   let controllerProvider: IProvider = verifyProvider(controller);
-  let metadata: IControllerMetadata = getMetadataArgs(controllerProvider.provide, "Controller");
+  let metadata: IControllerMetadata = getClassMetadata(Controller, controllerProvider.provide)?.args;
   let route: IResolvedRoute = {
-    method: RestMethods.GET,
+    method: HttpMethod.GET,
     params: isObject(params) ? params : {},
     route: metadata.name + "/" + action
   };
@@ -83,12 +85,12 @@ export function fakeControllerActionCall(injector: Injector,
     {provide: "isForwarded", useValue: false},
     {provide: "isForwarder", useValue: false},
     {provide: "isChainStopped", useValue: false},
-    {provide: REQUEST_ERROR_KEY, useValue: new ServerError(500)},
+    {provide: RouterError.toString(), useValue: new RouterError(500, "", {})},
     {provide: EventEmitter, useValue: new EventEmitter()}
   ];
   // if there is no logger provide it
-  if (!injector.has(Logger)) {
-    providers.push(verifyProvider(Logger));
+  if (!injector.has(LOGGER)) {
+    providers.push(verifyProvider(LOGGER));
   }
   /**
    * Create and resolve

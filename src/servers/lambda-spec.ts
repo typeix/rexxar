@@ -1,8 +1,7 @@
 import {Action, Controller, Produces, RootModule} from "../decorators";
-import {Logger, LogLevels} from "@typeix/utils";
 import {IAfterConstruct, Inject} from "@typeix/di";
-import {RestMethods, Router} from "@typeix/router";
-import {Request} from "../";
+import {HttpMethod, Router} from "@typeix/router";
+import {LOGGER, Request} from "../";
 import {
   APIGatewayProxyEvent
 } from "aws-lambda";
@@ -12,6 +11,7 @@ import {
 } from "aws-lambda/common/api-gateway";
 import {lambdaServer} from "./lambda";
 import {LambdaEvent} from "../decorators/lambda";
+import * as log4js from "log4js";
 
 
 describe("fakeHttpServer", () => {
@@ -31,10 +31,10 @@ describe("fakeHttpServer", () => {
     userArn: null,
     userAgent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/81.0.4044.129 Safari/537.36 Edg/81.0.416.68",
     user: null,
-    apiKey:null,
+    apiKey: null,
     apiKeyId: null
   }
-  let requestContext:  APIGatewayEventRequestContextWithAuthorizer<APIGatewayEventDefaultAuthorizerContext> = {
+  let requestContext: APIGatewayEventRequestContextWithAuthorizer<APIGatewayEventDefaultAuthorizerContext> = {
     accountId: "111122223333",
     apiId: "ibpv70npw6",
     protocol: "HTTP/1.1",
@@ -56,7 +56,7 @@ describe("fakeHttpServer", () => {
     isBase64Encoded: false,
     path: "/",
     pathParameters: null,
-    queryStringParameters:  null,
+    queryStringParameters: null,
     multiValueQueryStringParameters: {
       "a": [
         "1",
@@ -88,7 +88,7 @@ describe("fakeHttpServer", () => {
       @Inject(Request)
       private request: Request;
 
-      @LambdaEvent
+      @LambdaEvent()
       private event: APIGatewayProxyEvent;
 
       @Produces("application/json")
@@ -99,40 +99,49 @@ describe("fakeHttpServer", () => {
 
       @Produces("application/json")
       @Action("property")
-      actionProperty(@LambdaEvent event) {
+      actionProperty(@LambdaEvent() event) {
         return event;
       }
     }
 
 
-
-
-
     @RootModule({
-      providers: [Logger, Router],
+      providers: [
+        {
+          provide: LOGGER,
+          useFactory: () => {
+            return log4js.configure({
+              appenders: {
+                out: { type: 'stdout', layout: { type: 'json', separator: ',' } }
+              },
+              categories: {
+                default: { appenders: ['out'], level: 'info' }
+              }
+            }).getLogger();
+          }
+        },
+        Router
+      ],
       controllers: [MyController]
     })
     class MyModule implements IAfterConstruct {
       afterConstruct(): void {
         this.router.addRules([
           {
-            methods: [RestMethods.GET],
+            methods: [HttpMethod.GET],
             url: "/",
             route: "core/index"
           },
           {
-            methods: [RestMethods.GET],
+            methods: [HttpMethod.GET],
             url: "/property",
             route: "core/property"
           }
         ]);
-        this.logger.printToConsole();
-        this.logger.enable();
-        this.logger.setDebugLevel(LogLevels.BENCHMARK);
       }
 
-      @Inject(Logger)
-      private logger: Logger;
+      @Inject(LOGGER)
+      private logger: log4js.Logger;
 
       @Inject(Router)
       private router: Router;
@@ -150,7 +159,6 @@ describe("fakeHttpServer", () => {
       done();
     }).catch(done);
   });
-
 
 
   it("Api Gateway Check core/property", (done) => {

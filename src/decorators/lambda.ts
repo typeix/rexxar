@@ -10,4 +10,6 @@ import {LAMBDA_EVENT} from "../servers";
  * @description
  * Inject lambda event in your request
  */
-export let LambdaEvent = Inject(LAMBDA_EVENT, false);
+export function LambdaEvent() {
+  return Inject(LAMBDA_EVENT, false);
+}

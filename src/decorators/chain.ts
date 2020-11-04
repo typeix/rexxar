@@ -1,6 +1,4 @@
-import {defineMetadata, IMetadataValue} from "@typeix/di";
-
-export let CHAIN_METADATA_KEY = "typeix:rexxar:@Chain";
+import {createParameterDecorator} from "@typeix/metadata";
 /**
  * @since 1.0.0
  * @decorator
@@ -24,18 +22,13 @@ export let CHAIN_METADATA_KEY = "typeix:rexxar:@Chain";
  *     }
  *
  *     \@Action("index")
- *     actionIndex(@Chain data, @Param("file") file: string) {
+ *     actionIndex(@Chain() data, @Param("file") file: string) {
  *        return "My Index " + data;
  *     }
  * }
  */
-export let Chain: ParameterDecorator = (Class: Object, key: string | symbol, paramIndex: number): void => {
 
-  let metadata: IMetadataValue = {
-    args: {},
-    key,
-    name: CHAIN_METADATA_KEY,
-    paramIndex
-  };
-  defineMetadata(CHAIN_METADATA_KEY, metadata, Class, key);
-};
+
+export function Chain() {
+  return createParameterDecorator(Chain);
+}

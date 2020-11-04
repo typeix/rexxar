@@ -1,13 +1,28 @@
 import {EventEmitter} from "events";
 import {parse} from "url";
-import {IResolvedRoute, RestMethods, Router} from "@typeix/router";
+import {IResolvedRoute, HttpMethod, Router} from "@typeix/router";
 import {IResolvedModule, RenderType, RequestResolver} from "./request";
-import {Logger, uuid} from "@typeix/utils";
+import {uuid} from "@typeix/utils";
 import {IAfterConstruct, Inject, Injector, IProvider, verifyProvider} from "@typeix/di";
 import {ModuleInjector} from "@typeix/modules";
-import {Action, Controller, Module} from "..";
+import {Action, Controller, LOGGER, Module} from "..";
 import {BOOTSTRAP_MODULE} from "../decorators/module";
+import * as log4js from "log4js";
 
+
+const loggerProvider = {
+  provide: LOGGER,
+  useFactory: () => {
+    return log4js.configure({
+      appenders: {
+        out: {type: 'stdout', layout: {type: 'json', separator: ','}}
+      },
+      categories: {
+        default: {appenders: ['out'], level: 'info'}
+      }
+    }).getLogger();
+  }
+};
 
 class ResponseEmitter extends EventEmitter {
   writeHead() {
@@ -35,8 +50,9 @@ function createResolver(
   moduleInjector: ModuleInjector = new ModuleInjector(),
   _injector: Injector = new Injector()
 ): RequestResolver {
-  if (!_injector.has(Logger)) {
-    _injector.createAndResolve(verifyProvider(Logger), []);
+  if (!_injector.has(LOGGER)) {
+    _injector.createAndResolve(verifyProvider(loggerProvider),
+      []);
   }
   if (!_injector.has(Router)) {
     _injector.createAndResolve(verifyProvider(Router), []);
@@ -69,7 +85,7 @@ describe("RequestResolver", () => {
 
   beforeEach(() => {
     resolvedRoute = {
-      method: RestMethods.GET,
+      method: HttpMethod.GET,
       params: {
         a: 1,
         b: 2
@@ -191,7 +207,7 @@ describe("RequestResolver", () => {
 
     @Module({
       name: BOOTSTRAP_MODULE,
-      providers: [Logger, Router],
+      providers: [loggerProvider, Router],
       controllers: [MyController]
     })
     class MyModule {
@@ -226,13 +242,13 @@ describe("RequestResolver", () => {
 
     @Module({
       name: BOOTSTRAP_MODULE,
-      providers: [Logger, Router],
+      providers: [loggerProvider, Router],
       controllers: [MyController]
     })
     class MyModule implements IAfterConstruct {
       afterConstruct(): void {
         this.router.addRules([{
-          methods: [RestMethods.GET],
+          methods: [HttpMethod.GET],
           url: "/",
           route: "core/index"
         }]);
@@ -277,13 +293,13 @@ describe("RequestResolver", () => {
 
     @Module({
       name: BOOTSTRAP_MODULE,
-      providers: [Logger, Router],
+      providers: [loggerProvider, Router],
       controllers: [MyController]
     })
     class MyModule implements IAfterConstruct {
       afterConstruct(): void {
         this.router.addRules([{
-          methods: [RestMethods.POST],
+          methods: [HttpMethod.POST],
           url: "/",
           route: "core/index"
         }]);
@@ -317,7 +333,7 @@ describe("RequestResolver", () => {
     Promise.resolve(requestResolver.process())
       .then(resolved => {
         let module: IResolvedModule = requestResolver.getResolvedModule({
-          "method": RestMethods.POST,
+          "method": HttpMethod.POST,
           "params": {},
           "route": "core/index"
         });

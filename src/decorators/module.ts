@@ -1,7 +1,6 @@
 import {Module as AModule, IModuleMetadata as AIModuleMetadata} from "@typeix/modules";
 import {IProvider} from "@typeix/di";
 import {isArray, isUndefined} from "@typeix/utils";
-import {ServerError} from "@typeix/router";
 
 /**
  * @since 1.0.0
@@ -63,7 +62,7 @@ export interface IModuleMetadata extends AIModuleMetadata {
  *    }
  * }
  */
-export let Module = (config: IModuleMetadata): ClassDecorator => {
+export function Module(config: IModuleMetadata): ClassDecorator {
   if (!isArray(config.providers)) {
     config.providers = [];
   }
@@ -71,14 +70,13 @@ export let Module = (config: IModuleMetadata): ClassDecorator => {
     config.exports = [];
   }
   return AModule(config);
-
-};
+}
 
 /**
  * Bootstrap module name
  * @type {string}
  */
-export const BOOTSTRAP_MODULE = "typeix:rexxar:@RootModule";
+export const BOOTSTRAP_MODULE = "@typeix:rexxar:RootModule";
 /**
  * Module decorator
  * @decorator
@@ -104,11 +102,7 @@ export const BOOTSTRAP_MODULE = "typeix:rexxar:@RootModule";
  * }
  */
 export let RootModule = (config: RootModuleMetadata): ClassDecorator => {
-  if (isUndefined(config.name)) {
-    config.name = BOOTSTRAP_MODULE;
-  } else if (config.name !== BOOTSTRAP_MODULE) {
-    throw new ServerError(500, `RootModule name must be ${BOOTSTRAP_MODULE}`);
-  }
+  config.name = BOOTSTRAP_MODULE;
   if (isUndefined(config.shared_providers)) {
     config.shared_providers = [];
   }

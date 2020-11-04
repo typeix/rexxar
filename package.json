@@ -1,6 +1,6 @@
 {
   "name": "@typeix/rexxar",
-  "version": "2.2.1",
+  "version": "4.0.0",
   "description": "mvc framework for typescript",
   "main": "build/index.js",
   "scripts": {
@@ -24,18 +24,24 @@
   "homepage": "https://github.com/typeix/rexxar#readme",
   "devDependencies": {
     "@types/aws-lambda": "^8.10.51",
-    "@types/jest": "^25.2.1",
-    "@types/node": "^12.12.37",
-    "jest": "^25.5.4",
-    "ts-jest": "^25.4.0",
-    "tslint": "^6.1.2",
-    "typescript": "^3.8.3"
+    "@types/jest": "^26.0.15",
+    "@types/log4js": "^2.3.5",
+    "@types/node": "^12.12.54",
+    "@typescript-eslint/eslint-plugin": "^4.6.0",
+    "@typescript-eslint/eslint-plugin-tslint": "^4.6.0",
+    "@typescript-eslint/parser": "^4.6.0",
+    "eslint": "^7.7.0",
+    "jest": "^26.6.1",
+    "ts-jest": "^26.4.3",
+    "typescript": "^4.0.5"
   },
   "dependencies": {
-    "@typeix/di": "~2.3.1",
-    "@typeix/modules": "~2.3.0",
-    "@typeix/router": "~2.3.0",
-    "@typeix/utils": "~2.3.0"
+    "@typeix/di": "^4.0.3",
+    "@typeix/metadata": "^4.0.3",
+    "@typeix/modules": "^4.0.0",
+    "@typeix/router": "^4.0.0",
+    "@typeix/utils": "^4.0.0",
+    "log4js": "^6.3.0"
   },
   "engines": {
     "node": ">=12.0"

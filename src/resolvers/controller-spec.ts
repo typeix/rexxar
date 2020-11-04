@@ -1,8 +1,8 @@
-import {IResolvedRoute, RestMethods} from "@typeix/router";
+import {IResolvedRoute, HttpMethod} from "@typeix/router";
 import {ControllerResolver, Request} from "./controller";
-import {Logger, uuid} from "@typeix/utils";
+import {uuid} from "@typeix/utils";
 import {EventEmitter} from "events";
-import {IMetadata, Inject, Injector, verifyProvider, verifyProviders} from "@typeix/di";
+import {Inject, Injector, verifyProvider, verifyProviders} from "@typeix/di";
 import {
   Action,
   After,
@@ -15,12 +15,12 @@ import {
   Filter,
   IFilter,
   Param,
-  Produces
+  Produces, LOGGER
 } from "..";
-import {getMetadataArgs} from "../helpers/metadata";
 import {fakeControllerActionCall} from "../helpers/mocks";
 import {BOOTSTRAP_MODULE} from "../decorators/module";
-import {CHAIN_METADATA_KEY} from "../decorators/chain";
+import * as log4js from "log4js";
+import {getClassMetadata, IMetadata} from "@typeix/metadata";
 
 
 describe("ControllerResolver", () => {
@@ -34,7 +34,7 @@ describe("ControllerResolver", () => {
 
   beforeEach(() => {
     resolvedRoute = {
-      method: RestMethods.GET,
+      method: HttpMethod.GET,
       params: {
         a: 1,
         b: 2
@@ -61,7 +61,24 @@ describe("ControllerResolver", () => {
       {provide: "isChainStopped", useValue: false},
       {provide: EventEmitter, useValue: eventEmitter},
       {provide: Request, useValue: IRequest},
-      Logger
+      {
+        provide: LOGGER,
+        useFactory: () => {
+          log4js.addLayout('json', function (config) {
+            return function (logEvent) {
+              return JSON.stringify(logEvent) + config.separator;
+            }
+          });
+          return log4js.configure({
+            appenders: {
+              out: {type: 'stdout', layout: {type: 'json', separator: ','}}
+            },
+            categories: {
+              default: {appenders: ['out'], level: 'info'}
+            }
+          }).getLogger();
+        }
+      }
     ]);
     controllerResolver = injector.get(ControllerResolver);
   });
@@ -157,23 +174,18 @@ describe("ControllerResolver", () => {
     expect(controllerResolver.getMappedAction(bProvider, "index")).not.toBeNull();
     expect(controllerResolver.getMappedAction(bProvider, "parent")).not.toBeNull();
 
-    expect(controllerResolver.getMappedAction(aProvider, "index", "Before")).not.toBeNull();
-    expect(controllerResolver.getMappedAction(bProvider, "index", "Before")).not.toBeNull();
+    expect(controllerResolver.getMappedAction(aProvider, "index", Before)).not.toBeNull();
+    expect(controllerResolver.getMappedAction(bProvider, "index", Before)).not.toBeNull();
 
     expect(() => {
       controllerResolver.getMappedAction(aProvider, "index");
     }).toThrow(`@Action("index") is not defined on controller A`);
 
-    let action: IMetadata = controllerResolver.getMappedAction(bProvider, "index", "Before");
+    let action: IMetadata = controllerResolver.getMappedAction(bProvider, "index", Before);
     let bAction: IMetadata = {
       metadataKey: "typeix:rexxar:@Before",
-      targetKey: "beforeIndex",
-      metadataValue: {
-        "args": {"type": "Before", "value": "index"},
-        "key": "beforeIndex",
-        "name": "typeix:rexxar:@Before"
-      }
-
+      propertyKey: "beforeIndex",
+      args: {}
     };
     expect(action).toEqual(bAction);
   });
@@ -207,25 +219,12 @@ describe("ControllerResolver", () => {
     let action: IMetadata = controllerResolver.getMappedAction(bProvider, "index");
     let bAction: IMetadata = {
       metadataKey: "typeix:rexxar:@Action",
-      targetKey: "actionIndex",
-      metadataValue: {
-        "args": {"type": "Action", "value": "index"},
-        "key": "actionIndex",
-        "name": "typeix:rexxar:@Action"
-      }
+      propertyKey: "actionIndex",
+      args: {}
 
     };
     expect(action).toEqual(bAction);
 
-    let produces = controllerResolver.getDecoratorByMappedAction(bProvider, action, "Produces");
-    expect(produces).toEqual({
-      "args": {
-        "value": "application/json"
-      },
-      "key": "actionIndex",
-      "name": "typeix:rexxar:@Produces"
-    });
-    expect(controllerResolver.getDecoratorByMappedAction(bProvider, action, "Undefined")).toBeNull();
   });
 
 
@@ -239,13 +238,13 @@ describe("ControllerResolver", () => {
 
     class B extends A {
 
-      constructor(private test: Logger) {
+      constructor(private test: log4js.Logger) {
         super();
         console.log("TEST", test);
       }
 
       @Action("index")
-      actionIndex(@Param("a") p1, @Inject(Logger) p2, @Param("a1") p3, @Inject(Logger) p4, @Chain p5, @ErrorMessage p6, p7: Logger, p8): any {
+      actionIndex(@Param("a") p1, @Inject(log4js.Logger) p2, @Param("a1") p3, @Inject(log4js.Logger) p4, @Chain() p5, @ErrorMessage() p6, p7: log4js.Logger, p8): any {
 
       }
     }
@@ -266,7 +265,7 @@ describe("ControllerResolver", () => {
       {
         "args": {
           "isMutable": false,
-          "value": Logger
+          "value": log4js.Logger
         },
         "identifier": "typeix:@Inject:actionIndex:1",
         "key": "actionIndex",
@@ -284,7 +283,7 @@ describe("ControllerResolver", () => {
       {
         "args": {
           "isMutable": false,
-          "value": Logger
+          "value": log4js.Logger
         },
         "identifier": "typeix:@Inject:actionIndex:3",
         "key": "actionIndex",
@@ -306,7 +305,7 @@ describe("ControllerResolver", () => {
       {
         "args": {
           "isMutable": false,
-          "value": Logger
+          "value": log4js.Logger
         },
         "identifier": "typeix:@Inject:actionIndex:6",
         "key": "actionIndex",
@@ -338,27 +337,27 @@ describe("ControllerResolver", () => {
 
       @Action("index")
       @Produces("application/json")
-      actionIndex(@Param("a") param, @Inject(Logger) logger, @Param("b") b, @Chain chain, @Inject(Logger) lg): any {
+      actionIndex(@Param("a") param, @Inject(log4js.Logger) logger, @Param("b") b, @Chain() chain, @Inject(log4js.Logger) lg): any {
         return [param, logger, b, chain, lg];
       }
     }
 
     let aProvider = verifyProvider(A);
     let action: IMetadata = controllerResolver.getMappedAction(aProvider, "index");
-    let chain = CHAIN_METADATA_KEY;
+    let chain = Chain.toString();
 
     // create controller injector
     let injector = new Injector(null, [chain]);
     injector.set(chain, "CHAIN");
 
-    injector.createAndResolve(aProvider, verifyProviders([Logger]));
+    injector.createAndResolve(aProvider, verifyProviders([log4js.Logger]));
 
 
     let result: any = controllerResolver.processAction(injector, aProvider, action);
     expect(result).not.toBeNull();
     expect(aSpy).toHaveBeenCalledWith("contentType", "application/json");
 
-    expect(result).toEqual([1, injector.get(Logger), 2, "CHAIN", injector.get(Logger)]);
+    expect(result).toEqual([1, injector.get(log4js.Logger), 2, "CHAIN", injector.get(log4js.Logger)]);
 
   });
 
@@ -399,7 +398,7 @@ describe("ControllerResolver", () => {
 
       @Action("index")
       @Produces("application/json")
-      actionIndex(@Param("a") param, @Inject(Logger) logger, @Param("b") b, @Chain chain, @Inject(Logger) lg): any {
+      actionIndex(@Param("a") param, @Inject(log4js.Logger) logger, @Param("b") b, @Chain() chain, @Inject(log4js.Logger) lg): any {
         return {
           param,
           logger,
@@ -409,13 +408,13 @@ describe("ControllerResolver", () => {
     }
 
     let aProvider = verifyProvider(A);
-    let chain = CHAIN_METADATA_KEY;
+    let chain = Chain.toString();
 
     // create controller injector
     let injector = new Injector(null, [chain]);
     injector.set(chain, "CHAIN");
 
-    let metadata = getMetadataArgs(aProvider.provide, "Controller");
+    let metadata = getClassMetadata(aProvider.provide, Controller)?.args;
 
     let result: Promise<any> = controllerResolver.processFilters(injector, metadata, false);
     expect(result).toBeInstanceOf(Promise);
@@ -435,7 +434,7 @@ describe("ControllerResolver", () => {
     class A {
 
       @Action("index")
-      actionIndex(@Param("a") param, @Chain chain): any {
+      actionIndex(@Param("a") param, @Chain() chain): any {
         return {
           param,
           chain
@@ -468,34 +467,34 @@ describe("ControllerResolver", () => {
     })
     class A {
 
-      @BeforeEach
-      actionBeforeEach(@Chain chain): any {
+      @BeforeEach()
+      actionBeforeEach(@Chain() chain): any {
         return "beforeEach <- " + chain;
       }
 
       @Before("index")
-      actionBefore(@Chain chain): any {
+      actionBefore(@Chain() chain): any {
         return "before <- " + chain;
       }
 
       @Action("index")
-      actionIndex(@Chain chain): any {
+      actionIndex(@Chain() chain): any {
         return "action <- " + chain;
       }
 
       @After("index")
-      actionAfter(@Chain chain): any {
+      actionAfter(@Chain() chain): any {
         return "after <- " + chain;
       }
 
-      @AfterEach
-      actionAfterEach(@Chain chain): any {
+      @AfterEach()
+      actionAfterEach(@Chain() chain): any {
         return "afterEach <- " + chain;
       }
 
     }
 
-    let injector = Injector.createAndResolve(Logger, []);
+    let injector = Injector.createAndResolve(log4js.Logger, []);
     let result = fakeControllerActionCall(
       injector,
       verifyProvider(A),
@@ -547,34 +546,34 @@ describe("ControllerResolver", () => {
     })
     class A {
 
-      @BeforeEach
-      actionBeforeEach(@Chain chain: string): string {
+      @BeforeEach()
+      actionBeforeEach(@Chain() chain: string): string {
         return "beforeEach <- " + chain;
       }
 
       @Before("index")
-      actionBefore(@Chain chain: string): string {
+      actionBefore(@Chain() chain: string): string {
         return "before <- " + chain;
       }
 
       @Action("index")
-      actionIndex(@Chain chain: string): string {
+      actionIndex(@Chain() chain: string): string {
         return "action <- " + chain;
       }
 
       @After("index")
-      actionAfter(@Chain chain: string): string {
+      actionAfter(@Chain() chain: string): string {
         return "after <- " + chain;
       }
 
-      @AfterEach
-      actionAfterEach(@Chain chain: string): string {
+      @AfterEach()
+      actionAfterEach(@Chain() chain: string): string {
         return "afterEach <- " + chain;
       }
 
     }
 
-    let injector = Injector.createAndResolve(Logger, []);
+    let injector = Injector.createAndResolve(log4js.Logger, []);
     let result = fakeControllerActionCall(
       injector,
       verifyProvider(A),
@@ -629,36 +628,36 @@ describe("ControllerResolver", () => {
       @Inject(Request)
       private request: Request;
 
-      @BeforeEach
-      actionBeforeEach(@Chain chain: string): string {
+      @BeforeEach()
+      actionBeforeEach(@Chain() chain: string): string {
         return "beforeEach <- " + chain;
       }
 
       @Before("index")
-      actionBefore(@Chain chain: string): string {
+      actionBefore(@Chain() chain: string): string {
         return "before <- " + chain;
       }
 
       @Action("index")
-      actionIndex(@Chain chain: string): string {
+      actionIndex(@Chain() chain: string): string {
 
         return "action <- " + chain;
       }
 
       @After("index")
-      actionAfter(@Chain chain: string): string {
+      actionAfter(@Chain() chain: string): string {
         this.request.stopChain();
         return "after <- " + chain;
       }
 
-      @AfterEach
-      actionAfterEach(@Chain chain: string): string {
+      @AfterEach()
+      actionAfterEach(@Chain() chain: string): string {
         return "afterEach <- " + chain;
       }
 
     }
 
-    let injector = Injector.createAndResolve(Logger, []);
+    let injector = Injector.createAndResolve(log4js.Logger, []);
     let result = fakeControllerActionCall(
       injector,
       verifyProvider(A),
@@ -717,36 +716,36 @@ describe("ControllerResolver", () => {
       @Inject(Request)
       private request: Request;
 
-      @BeforeEach
-      actionBeforeEach(@Chain chain: string): string {
+      @BeforeEach()
+      actionBeforeEach(@Chain() chain: string): string {
         return "beforeEach <- " + chain;
       }
 
       @Before("index")
-      actionBefore(@Chain chain: string): string {
+      actionBefore(@Chain() chain: string): string {
         return "before <- " + chain;
       }
 
       @Action("index")
-      actionIndex(@Chain chain: string): string {
+      actionIndex(@Chain() chain: string): string {
 
         return "action <- " + chain;
       }
 
       @After("index")
-      actionAfter(@Chain chain: string): string {
+      actionAfter(@Chain() chain: string): string {
         this.request.stopChain();
         return "after <- " + chain;
       }
 
-      @AfterEach
-      actionAfterEach(@Chain chain: string): string {
+      @AfterEach()
+      actionAfterEach(@Chain() chain: string): string {
         return "afterEach <- " + chain;
       }
 
     }
 
-    let injector = Injector.createAndResolve(Logger, []);
+    let injector = Injector.createAndResolve(log4js.Logger, []);
     let result = fakeControllerActionCall(
       injector,
       verifyProvider(A),
@@ -809,30 +808,30 @@ describe("ControllerResolver", () => {
       @Inject(Request)
       private request: Request;
 
-      @BeforeEach
-      actionBeforeEach(@Chain chain: string): string {
+      @BeforeEach()
+      actionBeforeEach(@Chain() chain: string): string {
         return "beforeEach <- " + chain;
       }
 
       @Before("index")
-      actionBefore(@Chain chain: string): string {
+      actionBefore(@Chain() chain: string): string {
         return "before <- " + chain;
       }
 
       @Action("index")
-      actionIndex(@Chain chain: string): string {
+      actionIndex(@Chain() chain: string): string {
 
         return "action <- " + chain;
       }
 
       @After("index")
-      actionAfter(@Chain chain: string): string {
+      actionAfter(@Chain() chain: string): string {
         this.request.stopChain();
         return "after <- " + chain;
       }
 
-      @AfterEach
-      actionAfterEach(@Chain chain: string): string {
+      @AfterEach()
+      actionAfterEach(@Chain() chain: string): string {
         return "afterEach <- " + chain;
       }
 

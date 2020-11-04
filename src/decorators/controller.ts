@@ -1,12 +1,9 @@
-import {isArray, isClass} from "@typeix/utils";
-import {defineMetadata, IMetadataValue, IProvider, verifyProviders} from "@typeix/di";
+import {isArray} from "@typeix/utils";
+import {IProvider, verifyProviders} from "@typeix/di";
 import {TFilter} from "../interfaces";
+import {createClassDecorator} from "@typeix/metadata";
 
-/**
- * ControllerResolver metadata key
- * @type {string}
- */
-export const CONTROLLER_METADATA_KEY = "typeix:rexxar:@Controller";
+
 
 /**
  * @since 1.0.0
@@ -33,18 +30,10 @@ export interface IControllerMetadata {
  * @description
  * Define controller of application
  */
-export let Controller = (config: IControllerMetadata): ClassDecorator => (Class) => {
+export function Controller(config: IControllerMetadata) {
   if (!isArray(config.providers)) {
     config.providers = [];
   }
   config.providers = verifyProviders(config.providers);
-  if (!isClass(Class)) {
-    throw new TypeError(`@Controller is allowed only on class`);
-  }
-  let metadata: IMetadataValue = {
-    args: config,
-    name: CONTROLLER_METADATA_KEY
-  };
-  defineMetadata(CONTROLLER_METADATA_KEY, metadata, Class);
-  return Class;
-};
+  return createClassDecorator(Controller, config);
+}
