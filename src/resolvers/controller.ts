@@ -10,6 +10,7 @@ import {
   verifyProviders
 } from "@typeix/di";
 import {
+  inArray,
   isArray,
   isDate,
   isDefined,
@@ -33,13 +34,15 @@ import {
 } from "../decorators";
 import {Logger} from "log4js";
 import {
-  getClassMetadata,
+  getAllMetadataForTarget,
+  getClassMetadata, getDecoratorName,
   getMetadataForTarget,
   getMethodMetadata,
   IMetadata,
   TS_PARAMS
 } from "@typeix/metadata";
 import {LOGGER} from "../index";
+import {REXXAR_CONFIG} from "../servers/constants";
 
 
 /**
@@ -289,9 +292,9 @@ export class ControllerResolver {
    * @description
    * Check if controller has mapped action
    */
-  hasMappedAction(controllerProvider: IProvider, actionName: String, decorator: Function = Action): boolean {
+  hasMappedAction(controllerProvider: IProvider, actionName: string, decorator: Function = Action): boolean {
     return isDefined(
-      getMetadataForTarget(controllerProvider.provide)
+      getAllMetadataForTarget(controllerProvider.provide)
         .find(item => item.decorator === decorator && item?.args?.name === actionName)
     );
   }
@@ -306,15 +309,16 @@ export class ControllerResolver {
    */
   getMappedAction(controllerProvider: IProvider, actionName: string, decorator: Function = Action): IMetadata {
     // get mappings from controller
-    let mappedAction = getMethodMetadata(decorator, controllerProvider.provide, actionName);
+    let mappedAction = getAllMetadataForTarget(controllerProvider.provide).find(
+      item => item.decorator === decorator && item?.args?.name === actionName
+    );
     // check if action is present
     if (!isDefined(mappedAction)) {
       throw new RouterError(
         400,
-        `@${name}("${actionName}") is not defined on controller ${getProviderName(controllerProvider.provide)}`,
+        `@${getDecoratorName(decorator)}("${actionName}") is not defined on controller ${getProviderName(controllerProvider.provide)}`,
         {
           actionName,
-          name,
           resolvedRoute: this.resolvedRoute
         }
       );
@@ -333,10 +337,12 @@ export class ControllerResolver {
    */
   getMappedActionArguments(controllerProvider: IProvider, mappedAction: IMetadata): Array<IMetadata> {
     // get mappings from controller
+    let tokens = [Inject, Param, Chain, ErrorMessage];
     return getMetadataForTarget(controllerProvider.provide, mappedAction.propertyKey).filter(
       item =>
+
         item.metadataKey === TS_PARAMS ||
-        item.decorator === Inject
+        inArray(tokens, item.decorator)
     );
   }
 
@@ -488,71 +494,28 @@ export class ControllerResolver {
     // set default chain key
     injector.set(Chain.toString(), null);
 
+    let decorators: Array<Function> = injector.get(REXXAR_CONFIG);
+
     // process filters
     if (isArray(metadata.filters)) {
       // set filter result
       injector.set(Chain.toString(), await this.processFilters(injector, metadata, false));
     }
 
-    // process @BeforeEach action
-    if (this.hasMappedAction(controllerProvider, null, BeforeEach) && isFalsy(this.isChainStopped)) {
-      let start = Date.now();
-      let result = await this.processAction(
-        injector,
-        controllerProvider,
-        this.getMappedAction(controllerProvider, null, BeforeEach)
-      );
+    for (let decorator of decorators) {
+      let action = inArray([BeforeEach, AfterEach], decorator) ? null : actionName;
+      let isActionMapped = decorator === Action ? true : this.hasMappedAction(controllerProvider, action, decorator);
+      if (isActionMapped && isFalsy(this.isChainStopped)) {
+        let start = Date.now();
+        let result = await this.processAction(
+          injector,
+          controllerProvider,
+          this.getMappedAction(controllerProvider, action, decorator)
+        );
 
-      injector.set(Chain.toString(), result);
-      this.benchmark("BeforeEach", start);
-    }
-
-    // process @Before action
-    if (this.hasMappedAction(controllerProvider, actionName, Before) && isFalsy(this.isChainStopped)) {
-      let start = Date.now();
-      let result = await this.processAction(
-        injector,
-        controllerProvider,
-        this.getMappedAction(controllerProvider, actionName, Before)
-      );
-      injector.set(Chain.toString(), result);
-      this.benchmark("Before", start);
-    }
-
-    // Action
-    if (isFalsy(this.isChainStopped)) {
-      let start = Date.now();
-      let result = await this.processAction(
-        injector,
-        controllerProvider,
-        this.getMappedAction(controllerProvider, actionName)
-      );
-      injector.set(Chain.toString(), result);
-      this.benchmark("Action", start);
-    }
-
-    // process @After action
-    if (this.hasMappedAction(controllerProvider, actionName, After) && isFalsy(this.isChainStopped)) {
-      let start = Date.now();
-      let result = await this.processAction(
-        injector,
-        controllerProvider,
-        this.getMappedAction(controllerProvider, actionName, After)
-      );
-      injector.set(Chain.toString(), result);
-      this.benchmark("After", start);
-    }
-
-    // process @AfterEach action
-    if (this.hasMappedAction(controllerProvider, null, AfterEach) && isFalsy(this.isChainStopped)) {
-      let start = Date.now();
-      let result = await this.processAction(
-        injector,
-        controllerProvider,
-        this.getMappedAction(controllerProvider, null, AfterEach)
-      );
-      injector.set(Chain.toString(), result);
-      this.benchmark("AfterEach", start);
+        injector.set(Chain.toString(), result);
+        this.benchmark(decorator.toString(), start);
+      }
     }
 
     if (isFalsy(this.isChainStopped) && isArray(metadata.filters)) {

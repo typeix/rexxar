@@ -1,16 +1,19 @@
 import {createServer, IncomingMessage, ServerResponse} from "http";
 import {ModuleInjector} from "@typeix/modules";
-import {isString} from "@typeix/utils";
+import {isString, isDefined} from "@typeix/utils";
 import {fireRequest} from "../resolvers/request";
 import {BOOTSTRAP_MODULE, RootModule, RootModuleMetadata} from "../decorators/module";
 import {RouterError} from "@typeix/router";
 import {getClassMetadata} from "@typeix/metadata";
 import {Logger} from "log4js";
-import {LOGGER} from "../index";
+import {Action, After, AfterEach, Before, BeforeEach, Chain, ErrorMessage, LOGGER, Param} from "../index";
+import {REXXAR_CONFIG} from "./constants";
+import {Inject} from "@typeix/di";
 
 export interface HttpServerConfig {
   port: number;
   hostname?: string;
+  actions?: Array<Function>;
 }
 
 /**
@@ -33,6 +36,16 @@ export function httpServer(Class: Function, config: HttpServerConfig): ModuleInj
   let moduleInjector = ModuleInjector.createAndResolve(Class, metadata.shared_providers);
   let injector = moduleInjector.getInjector(Class);
   let logger: Logger = injector.get(LOGGER);
+
+  /**
+   * Set config
+   */
+  if (!isDefined(config.actions)) {
+    config.actions = [BeforeEach, Before, Action, After, AfterEach];
+  }
+
+  injector.set(REXXAR_CONFIG, config)
+
   let server = createServer();
 
   server.on("request",

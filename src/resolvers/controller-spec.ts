@@ -182,12 +182,10 @@ describe("ControllerResolver", () => {
     }).toThrow(`@Action("index") is not defined on controller A`);
 
     let action: IMetadata = controllerResolver.getMappedAction(bProvider, "index", Before);
-    let bAction: IMetadata = {
-      metadataKey: "typeix:rexxar:@Before",
-      propertyKey: "beforeIndex",
-      args: {}
-    };
-    expect(action).toEqual(bAction);
+    expect(action.propertyKey).toBe("beforeIndex");
+    expect(action.decoratorType).toBe("method");
+    expect(action.args.name).toBe("index");
+    expect(action.designType).toBe(Function);
   });
 
 
@@ -217,14 +215,10 @@ describe("ControllerResolver", () => {
     let bProvider = verifyProvider(B);
 
     let action: IMetadata = controllerResolver.getMappedAction(bProvider, "index");
-    let bAction: IMetadata = {
-      metadataKey: "typeix:rexxar:@Action",
-      propertyKey: "actionIndex",
-      args: {}
-
-    };
-    expect(action).toEqual(bAction);
-
+    expect(action.propertyKey).toBe("actionIndex");
+    expect(action.decoratorType).toBe("method");
+    expect(action.args.name).toBe("index");
+    expect(action.designType).toBe(Function);
   });
 
 
@@ -255,72 +249,51 @@ describe("ControllerResolver", () => {
 
     expect(arg).toEqual([
       {
-        "args": {
-          "value": "a"
-        },
-        "key": "actionIndex",
-        "name": "typeix:rexxar:@Param",
-        "paramIndex": 0
+        "args": [
+          Object,
+          Object,
+          Object,
+          Object,
+          Object,
+          Object,
+          null,
+          Object
+        ],
+        "metadataKey": "design:paramtypes",
+        "propertyKey": "actionIndex"
       },
       {
         "args": {
-          "isMutable": false,
-          "value": log4js.Logger
+          "isMutable": false
         },
-        "identifier": "typeix:@Inject:actionIndex:1",
-        "key": "actionIndex",
-        "name": "typeix:@Inject",
-        "paramIndex": 1
+        "decorator": {
+          "@typeix:id": "@typeix:mixed:Inject:43d98213-50d4-4005-a325-1eb86b6872e7",
+          "@typeix:name": "Inject",
+          "@typeix:type": "mixed",
+          "@typeix:uuid": "43d98213-50d4-4005-a325-1eb86b6872e7"
+        },
+        "decoratorType": "mixed",
+        "designParam": "[Circular reference found] Truncated by IDE",
+        "designReturn": "[Circular reference found] Truncated by IDE",
+        "designType": {},
+        "metadataKey": "@typeix:mixed:Inject:43d98213-50d4-4005-a325-1eb86b6872e7:3",
+        "paramIndex": 3,
+        "propertyKey": "actionIndex",
+        "type": "parameter"
       },
       {
         "args": {
-          "value": "a1"
+          "isMutable": false
         },
-        "key": "actionIndex",
-        "name": "typeix:rexxar:@Param",
-        "paramIndex": 2
-      },
-      {
-        "args": {
-          "isMutable": false,
-          "value": log4js.Logger
-        },
-        "identifier": "typeix:@Inject:actionIndex:3",
-        "key": "actionIndex",
-        "name": "typeix:@Inject",
-        "paramIndex": 3
-      },
-      {
-        "args": {},
-        "key": "actionIndex",
-        "name": "typeix:rexxar:@Chain",
-        "paramIndex": 4
-      },
-      {
-        "args": {},
-        "key": "actionIndex",
-        "name": "typeix:rexxar:@ErrorMessage",
-        "paramIndex": 5
-      },
-      {
-        "args": {
-          "isMutable": false,
-          "value": log4js.Logger
-        },
-        "identifier": "typeix:@Inject:actionIndex:6",
-        "key": "actionIndex",
-        "name": "typeix:@Inject",
-        "paramIndex": 6
-      },
-      {
-        "args": {
-          "isMutable": false,
-          "value": Object
-        },
-        "identifier": "typeix:@Inject:actionIndex:7",
-        "key": "actionIndex",
-        "name": "typeix:@Inject",
-        "paramIndex": 7
+        "decorator": "[Circular reference found] Truncated by IDE",
+        "decoratorType": "mixed",
+        "designParam": "[Circular reference found] Truncated by IDE",
+        "designReturn": "[Circular reference found] Truncated by IDE",
+        "designType": "[Circular reference found] Truncated by IDE",
+        "metadataKey": "@typeix:mixed:Inject:43d98213-50d4-4005-a325-1eb86b6872e7:1",
+        "paramIndex": 1,
+        "propertyKey": "actionIndex",
+        "type": "parameter"
       }
     ]);
 

@@ -1,18 +1,21 @@
 import {createServer, ServerOptions} from "https";
 import {IncomingMessage, ServerResponse} from "http";
 import {ModuleInjector} from "@typeix/modules";
-import {isString} from "@typeix/utils";
+import {isDefined, isString} from "@typeix/utils";
 import {fireRequest} from "../resolvers/request";
 import {BOOTSTRAP_MODULE, RootModule, RootModuleMetadata} from "../decorators/module";
 import {RouterError} from "@typeix/router";
 import {getClassMetadata} from "@typeix/metadata";
 import {Logger} from "log4js";
-import {LOGGER} from "../index";
+import {Action, After, AfterEach, Before, BeforeEach, Chain, ErrorMessage, LOGGER, Param} from "../index";
+import {Inject} from "@typeix/di";
+import {REXXAR_CONFIG} from "./constants";
 
 export interface HttpsServerConfig {
   options: ServerOptions;
   port: number;
   hostname?: string;
+  actions?: Array<Function>;
 }
 /**
  * @since 1.0.0
@@ -34,6 +37,17 @@ export function httpsServer(Class: Function, config: HttpsServerConfig): ModuleI
   let moduleInjector = ModuleInjector.createAndResolve(Class, metadata.shared_providers);
   let injector = moduleInjector.getInjector(Class);
   let logger: Logger = injector.get(LOGGER);
+
+  /**
+   * Set config
+   */
+  if (!isDefined(config.actions)) {
+    config.actions = [BeforeEach, Before, Action, After, AfterEach];
+  }
+
+  injector.set(REXXAR_CONFIG, config)
+
+
   let server = createServer(config.options, (request: IncomingMessage, response: ServerResponse) =>
       fireRequest(moduleInjector, request, response)
   );

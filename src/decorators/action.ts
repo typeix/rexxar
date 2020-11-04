@@ -52,7 +52,7 @@ export function Action(name: string) {
  * Define name of before action to class
  */
 export function Before(name: string) {
-  return createMethodDecorator(Action, {name});
+  return createMethodDecorator(Before, {name});
 }
 /**
  * After Action decorator
@@ -66,5 +66,5 @@ export function Before(name: string) {
  * Define name of after action to class
  */
 export function After(name: string) {
-  return createMethodDecorator(Action, {name});
+  return createMethodDecorator(After, {name});
 }
