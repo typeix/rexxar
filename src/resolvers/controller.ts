@@ -346,7 +346,7 @@ export class ControllerResolver {
     let action = proto[mappedAction.propertyKey].bind(controllerInstance);
     // content type
 
-    let tokens = [Inject, Param, Chain, ErrorMessage];
+
     let metadata: Array<IMetadata> = getMetadataForTarget(controllerProvider.provide, mappedAction.propertyKey);
 
     let contentType: IMetadata = metadata.find(item => item.decorator === Produces)?.args?.value;
@@ -355,34 +355,29 @@ export class ControllerResolver {
       this.getEventEmitter().emit("contentType", contentType);
     }
     // resolve action params
-    let actionParams = [];
-    let paramsMetadata: Array<IMetadata> = metadata.filter(
-      item => item.metadataKey === TS_PARAMS || inArray(tokens, item.decorator)
-    );
+    let actionParams = metadata.find(item => item.metadataKey === TS_PARAMS)?.args || [];
+    let tokens = [Inject, Param, Chain, ErrorMessage];
+    let paramsMetadata: Array<IMetadata> = metadata.filter(item => inArray(tokens, item.decorator));
 
     if (isArray(paramsMetadata)) {
-      let paramIndex = paramsMetadata.findIndex(item => item.metadataKey === TS_PARAMS);
-      if (isDefined(paramIndex) && isNumber(paramIndex)) {
-        actionParams = paramsMetadata.splice(paramIndex, 1);
-        for (let item of paramsMetadata) {
-          switch (item.decorator) {
-            case Param:
-              if (isDefined(this.resolvedRoute.params) && this.resolvedRoute.params.hasOwnProperty(item.args?.value)) {
-                actionParams.splice(item.paramIndex, 1, this.resolvedRoute.params[item.args.value]);
-              } else {
-                actionParams.splice(item.paramIndex, 1, null);
-              }
-              break;
-            case Chain:
-              actionParams.splice(item.paramIndex, 1, injector.get(Chain.toString()));
-              break;
-            case Inject:
-              actionParams.splice(item.paramIndex, 1, isFalsy(item.args.token) ? injector.get(item.designType) : injector.get(item.args.token));
-              break;
-            case ErrorMessage:
-              actionParams.splice(item.paramIndex, 1, injector.get(RouterError.toString()));
-              break;
-          }
+      for (let item of paramsMetadata) {
+        switch (item.decorator) {
+          case Param:
+            if (isDefined(this.resolvedRoute.params) && this.resolvedRoute.params.hasOwnProperty(item.args?.value)) {
+              actionParams.splice(item.paramIndex, 1, this.resolvedRoute.params[item.args.value]);
+            } else {
+              actionParams.splice(item.paramIndex, 1, null);
+            }
+            break;
+          case Chain:
+            actionParams.splice(item.paramIndex, 1, injector.get(Chain.toString()));
+            break;
+          case Inject:
+            actionParams.splice(item.paramIndex, 1, isFalsy(item.args.token) ? injector.get(item.designType) : injector.get(item.args.token));
+            break;
+          case ErrorMessage:
+            actionParams.splice(item.paramIndex, 1, injector.get(RouterError.toString()));
+            break;
         }
       }
     }

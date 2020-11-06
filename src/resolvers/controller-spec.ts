@@ -309,7 +309,7 @@ describe("ControllerResolver", () => {
   });
 
 
-  xtest("ControllerResolver.processController no action chain", (done) => {
+  test("ControllerResolver.processController no action chain", (done) => {
     @Controller({
       name: BOOTSTRAP_MODULE
     })
@@ -326,7 +326,9 @@ describe("ControllerResolver", () => {
 
     let aProvider = verifyProvider(A);
     // process controller
-    let result = controllerResolver.processController(new Injector(), aProvider, "index");
+    let injector = new Injector()
+    injector.set(ACTION_CONFIG,  [BeforeEach, Before, Action, After, AfterEach]);
+    let result = controllerResolver.processController(injector, aProvider, "index");
     expect(result).toBeInstanceOf(Promise);
 
     result.then(data => {
