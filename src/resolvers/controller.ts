@@ -36,13 +36,11 @@ import {
   getAllMetadataForTarget,
   getClassMetadata, getDecoratorName,
   getMetadataForTarget,
-  getMethodMetadata,
   IMetadata,
   TS_PARAMS
 } from "@typeix/metadata";
 import {ACTION_CONFIG} from "../servers/constants";
 import {Logger} from "@typeix/logger";
-import {hasDecorator} from "../../../metadata/src";
 
 
 /**
