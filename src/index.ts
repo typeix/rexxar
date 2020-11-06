@@ -43,4 +43,6 @@ export {
 export * from "@typeix/router";
 export * from "@typeix/di";
 export * from "@typeix/utils";
+export * from "@typeix/logger";
+export * from "@typeix/metadata";
 
