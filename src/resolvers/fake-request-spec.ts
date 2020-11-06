@@ -1,26 +1,10 @@
 import {fakeHttpServer, FakeResponseApi, FakeServerApi} from "../helpers/mocks";
-import {Action, Before, Chain, Controller, ErrorMessage, LOGGER, Module} from "..";
+import {Action, Before, Chain, Controller, ErrorMessage, Module} from "..";
 import {Request} from "./controller";
 import {IAfterConstruct, Inject} from "@typeix/di";
 import {HttpMethod, Router, RouterError} from "@typeix/router";
 import {BOOTSTRAP_MODULE} from "../decorators/module";
-import * as log4js from "log4js";
-
-
-
-const LoggerProvider = {
-  provide: LOGGER,
-  useFactory: () => {
-    return log4js.configure({
-      appenders: {
-        out: {type: 'stdout', layout: {type: 'json', separator: ','}}
-      },
-      categories: {
-        default: {appenders: ['out'], level: 'info'}
-      }
-    }).getLogger();
-  }
-};
+import {Logger} from "@typeix/logger";
 
 describe("fakeHttpServer", () => {
 
@@ -65,13 +49,13 @@ describe("fakeHttpServer", () => {
 
       @Action("redirect")
       actionRedirect() {
-        return this.request.redirectTo("/mypage", 301);
+        return this.request.redirectTo("/mypage", 307);
       }
     }
 
     @Module({
       name: BOOTSTRAP_MODULE,
-      providers: [LoggerProvider, Router],
+      providers: [Logger, Router],
       controllers: [MyController]
     })
     class MyModule implements IAfterConstruct {
@@ -100,9 +84,6 @@ describe("fakeHttpServer", () => {
         ]);
         this.router.setError("core/error");
       }
-
-      @Inject(LOGGER)
-      private logger: log4js.Logger;
 
       @Inject(Router)
       private router: Router;

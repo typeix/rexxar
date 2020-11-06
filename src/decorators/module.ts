@@ -1,6 +1,7 @@
 import {Module as AModule, IModuleMetadata as AIModuleMetadata} from "@typeix/modules";
 import {IProvider} from "@typeix/di";
-import {isArray, isUndefined} from "@typeix/utils";
+import {inArray, isArray, isUndefined} from "@typeix/utils";
+import {Logger} from "@typeix/logger";
 
 /**
  * @since 1.0.0

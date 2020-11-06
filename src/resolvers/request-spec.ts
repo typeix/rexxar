@@ -5,24 +5,12 @@ import {IResolvedModule, RenderType, RequestResolver} from "./request";
 import {uuid} from "@typeix/utils";
 import {IAfterConstruct, Inject, Injector, IProvider, verifyProvider} from "@typeix/di";
 import {ModuleInjector} from "@typeix/modules";
-import {Action, Controller, LOGGER, Module} from "..";
+import {Action, After, AfterEach, Before, BeforeEach, Controller, Module} from "..";
 import {BOOTSTRAP_MODULE} from "../decorators/module";
-import * as log4js from "log4js";
+import {Logger} from "@typeix/logger";
+import {ACTION_CONFIG} from "../servers/constants";
 
 
-const loggerProvider = {
-  provide: LOGGER,
-  useFactory: () => {
-    return log4js.configure({
-      appenders: {
-        out: {type: 'stdout', layout: {type: 'json', separator: ','}}
-      },
-      categories: {
-        default: {appenders: ['out'], level: 'info'}
-      }
-    }).getLogger();
-  }
-};
 
 class ResponseEmitter extends EventEmitter {
   writeHead() {
@@ -50,8 +38,11 @@ function createResolver(
   moduleInjector: ModuleInjector = new ModuleInjector(),
   _injector: Injector = new Injector()
 ): RequestResolver {
-  if (!_injector.has(LOGGER)) {
-    _injector.createAndResolve(verifyProvider(loggerProvider),
+  if (!_injector.has(Logger)) {
+    _injector.createAndResolve(verifyProvider({
+        provide: Logger,
+        useFactory: () => new Logger(Logger.defaultConfig('info'))
+      }),
       []);
   }
   if (!_injector.has(Router)) {
@@ -207,7 +198,7 @@ describe("RequestResolver", () => {
 
     @Module({
       name: BOOTSTRAP_MODULE,
-      providers: [loggerProvider, Router],
+      providers: [Logger, Router],
       controllers: [MyController]
     })
     class MyModule {
@@ -215,6 +206,7 @@ describe("RequestResolver", () => {
 
 
     let moduleInjector = ModuleInjector.createAndResolve(MyModule, []);
+    moduleInjector.getInjector(MyModule).set(ACTION_CONFIG, [BeforeEach, Before, Action, After, AfterEach]);
     let requestResolver = createResolver(id, data, request, response, moduleInjector);
     let resolvedModule = requestResolver.getResolvedModule(resolvedRoute);
 
@@ -242,7 +234,7 @@ describe("RequestResolver", () => {
 
     @Module({
       name: BOOTSTRAP_MODULE,
-      providers: [loggerProvider, Router],
+      providers: [Logger, Router],
       controllers: [MyController]
     })
     class MyModule implements IAfterConstruct {
@@ -263,6 +255,7 @@ describe("RequestResolver", () => {
     request.headers = {};
 
     let moduleInjector = ModuleInjector.createAndResolve(MyModule, []);
+    moduleInjector.getInjector(MyModule).set(ACTION_CONFIG, [BeforeEach, Before, Action, After, AfterEach]);
     let requestResolver = createResolver(id, data, request, response, moduleInjector, moduleInjector.getInjector(MyModule));
     let mModule = moduleInjector.get(MyModule);
     expect(mModule).toBeInstanceOf(MyModule);
@@ -293,7 +286,7 @@ describe("RequestResolver", () => {
 
     @Module({
       name: BOOTSTRAP_MODULE,
-      providers: [loggerProvider, Router],
+      providers: [Logger, Router],
       controllers: [MyController]
     })
     class MyModule implements IAfterConstruct {
@@ -314,6 +307,7 @@ describe("RequestResolver", () => {
     request.headers = {};
 
     let moduleInjector = ModuleInjector.createAndResolve(MyModule, []);
+    moduleInjector.getInjector(MyModule).set(ACTION_CONFIG, [BeforeEach, Before, Action, After, AfterEach]);
     let requestResolver = createResolver(id, data, request, response, moduleInjector, moduleInjector.getInjector(MyModule));
 
 

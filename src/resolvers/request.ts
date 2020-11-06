@@ -9,17 +9,17 @@ import {
   uuid
 } from "@typeix/utils";
 import {IResolvedRoute, HttpMethod, Router, RouterError, toHttpMethod} from "@typeix/router"
-import {ModuleInjector} from "@typeix/modules";
+import {ModuleInjector, Module} from "@typeix/modules";
 import {IncomingMessage, OutgoingHttpHeaders, ServerResponse} from "http";
 import {EventEmitter} from "events";
 import {parse, Url} from "url";
 import {IRedirect} from "../interfaces";
 import {ControllerResolver} from "./controller";
-import {Controller, IControllerMetadata, IModuleMetadata, LOGGER, Module} from "..";
+import {Controller, IControllerMetadata, IModuleMetadata} from "..";
 import {BOOTSTRAP_MODULE} from "../decorators/module";
 import {LAMBDA_CONTEXT, LAMBDA_EVENT} from "../servers";
 import {getClassMetadata} from "@typeix/metadata";
-import {Logger} from "log4js";
+import {Logger} from "@typeix/logger";
 
 /**
  * @since 1.0.0
@@ -96,7 +96,7 @@ export function fireRequest(moduleInjector: ModuleInjector,
     return Promise.reject(new RouterError(500, "@RootModule is not defined", rootModuleMetadata))
   }
   let rootInjector: Injector = moduleInjector.getInjector(rootModuleMetadata.token);
-  let logger = rootInjector.get(LOGGER);
+  let logger = rootInjector.get(Logger);
   /**
    * Create RequestResolver injector
    */
@@ -112,7 +112,7 @@ export function fireRequest(moduleInjector: ModuleInjector,
       {provide: "request", useValue: request},
       {provide: "response", useValue: response},
       {provide: ModuleInjector, useValue: moduleInjector},
-      EventEmitter
+      {provide: EventEmitter, useValue: new EventEmitter()}
     ]
   );
   /**

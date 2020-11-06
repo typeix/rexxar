@@ -1,7 +1,7 @@
 import {Action, Controller, Produces, RootModule} from "../decorators";
 import {IAfterConstruct, Inject} from "@typeix/di";
 import {HttpMethod, Router} from "@typeix/router";
-import {LOGGER, Request} from "../";
+import {Request} from "../";
 import {
   APIGatewayProxyEvent
 } from "aws-lambda";
@@ -11,7 +11,8 @@ import {
 } from "aws-lambda/common/api-gateway";
 import {lambdaServer} from "./lambda";
 import {LambdaEvent} from "../decorators/lambda";
-import * as log4js from "log4js";
+import {Logger} from "@typeix/logger";
+
 
 
 describe("fakeHttpServer", () => {
@@ -107,19 +108,7 @@ describe("fakeHttpServer", () => {
 
     @RootModule({
       providers: [
-        {
-          provide: LOGGER,
-          useFactory: () => {
-            return log4js.configure({
-              appenders: {
-                out: { type: 'stdout', layout: { type: 'json', separator: ',' } }
-              },
-              categories: {
-                default: { appenders: ['out'], level: 'info' }
-              }
-            }).getLogger();
-          }
-        },
+        Logger,
         Router
       ],
       controllers: [MyController]
@@ -140,11 +129,9 @@ describe("fakeHttpServer", () => {
         ]);
       }
 
-      @Inject(LOGGER)
-      private logger: log4js.Logger;
+      @Inject() private logger: Logger;
 
-      @Inject(Router)
-      private router: Router;
+      @Inject() private router: Router;
     }
 
     handler = lambdaServer(MyModule);

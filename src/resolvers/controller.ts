@@ -22,7 +22,7 @@ import {
 import {toHttpMethod, IResolvedRoute, HttpMethod, RouterError} from "@typeix/router";
 import {IConnection} from "../interfaces";
 import {
-  Action, After, AfterEach, Before,
+  Action, AfterEach,
   BeforeEach,
   Chain,
   Controller,
@@ -32,7 +32,6 @@ import {
   Param,
   Produces
 } from "../decorators";
-import {Logger} from "log4js";
 import {
   getAllMetadataForTarget,
   getClassMetadata, getDecoratorName,
@@ -41,8 +40,9 @@ import {
   IMetadata,
   TS_PARAMS
 } from "@typeix/metadata";
-import {LOGGER} from "../index";
-import {REXXAR_CONFIG} from "../servers/constants";
+import {ACTION_CONFIG} from "../servers/constants";
+import {Logger} from "@typeix/logger";
+import {hasDecorator} from "../../../metadata/src";
 
 
 /**
@@ -102,8 +102,7 @@ export class ControllerResolver {
    * @description
    * Provided by injector
    */
-  @Inject(LOGGER)
-  private logger: Logger;
+  @Inject() private logger: Logger;
   /**
    * @param {EventEmitter} eventEmitter
    * @description
@@ -295,7 +294,7 @@ export class ControllerResolver {
   hasMappedAction(controllerProvider: IProvider, actionName: string, decorator: Function = Action): boolean {
     return isDefined(
       getAllMetadataForTarget(controllerProvider.provide)
-        .find(item => item.decorator === decorator && item?.args?.name === actionName)
+        .find(item => item.decorator === decorator && item?.args?.value === actionName)
     );
   }
 
@@ -310,7 +309,7 @@ export class ControllerResolver {
   getMappedAction(controllerProvider: IProvider, actionName: string, decorator: Function = Action): IMetadata {
     // get mappings from controller
     let mappedAction = getAllMetadataForTarget(controllerProvider.provide).find(
-      item => item.decorator === decorator && item?.args?.name === actionName
+      item => item.decorator === decorator && item?.args?.value === actionName
     );
     // check if action is present
     if (!isDefined(mappedAction)) {
@@ -325,25 +324,6 @@ export class ControllerResolver {
     }
 
     return mappedAction;
-  }
-
-  /**
-   * @since 1.0.0
-   * @function
-   * @name Request#getMappedActionArguments
-   * @private
-   * @description
-   * Get list of action arguments
-   */
-  getMappedActionArguments(controllerProvider: IProvider, mappedAction: IMetadata): Array<IMetadata> {
-    // get mappings from controller
-    let tokens = [Inject, Param, Chain, ErrorMessage];
-    return getMetadataForTarget(controllerProvider.provide, mappedAction.propertyKey).filter(
-      item =>
-
-        item.metadataKey === TS_PARAMS ||
-        inArray(tokens, item.decorator)
-    );
   }
 
 
@@ -365,23 +345,29 @@ export class ControllerResolver {
     // get action
     let action = proto[mappedAction.propertyKey].bind(controllerInstance);
     // content type
-    let contentType: IMetadata = getMethodMetadata(Produces, controllerProvider.provide, <string>mappedAction.propertyKey);
+
+    let tokens = [Inject, Param, Chain, ErrorMessage];
+    let metadata: Array<IMetadata> = getMetadataForTarget(controllerProvider.provide, mappedAction.propertyKey);
+
+    let contentType: IMetadata = metadata.find(item => item.decorator === Produces)?.args?.value;
 
     if (isDefined(contentType)) {
-      this.getEventEmitter().emit("contentType", contentType?.args?.value);
+      this.getEventEmitter().emit("contentType", contentType);
     }
     // resolve action params
     let actionParams = [];
-    let metadata: Array<IMetadata> = this.getMappedActionArguments(controllerProvider, mappedAction);
+    let paramsMetadata: Array<IMetadata> = metadata.filter(
+      item => item.metadataKey === TS_PARAMS || inArray(tokens, item.decorator)
+    );
 
-    if (isArray(metadata)) {
-      let paramIndex = metadata.findIndex(item => item.metadataKey === TS_PARAMS);
+    if (isArray(paramsMetadata)) {
+      let paramIndex = paramsMetadata.findIndex(item => item.metadataKey === TS_PARAMS);
       if (isDefined(paramIndex) && isNumber(paramIndex)) {
-        actionParams = metadata.splice(paramIndex, 1);
-        for (let item of metadata) {
+        actionParams = paramsMetadata.splice(paramIndex, 1);
+        for (let item of paramsMetadata) {
           switch (item.decorator) {
             case Param:
-              if (isDefined(this.resolvedRoute.params) && this.resolvedRoute.params.hasOwnProperty(item.args.value)) {
+              if (isDefined(this.resolvedRoute.params) && this.resolvedRoute.params.hasOwnProperty(item.args?.value)) {
                 actionParams.splice(item.paramIndex, 1, this.resolvedRoute.params[item.args.value]);
               } else {
                 actionParams.splice(item.paramIndex, 1, null);
@@ -391,10 +377,10 @@ export class ControllerResolver {
               actionParams.splice(item.paramIndex, 1, injector.get(Chain.toString()));
               break;
             case Inject:
-              actionParams.splice(item.paramIndex, 1, injector.get(item.args.token));
+              actionParams.splice(item.paramIndex, 1, isFalsy(item.args.token) ? injector.get(item.designType) : injector.get(item.args.token));
               break;
             case ErrorMessage:
-              actionParams.splice(item.paramIndex, 1, injector.get(ErrorMessage.toString()));
+              actionParams.splice(item.paramIndex, 1, injector.get(RouterError.toString()));
               break;
           }
         }
@@ -494,7 +480,7 @@ export class ControllerResolver {
     // set default chain key
     injector.set(Chain.toString(), null);
 
-    let decorators: Array<Function> = injector.get(REXXAR_CONFIG);
+    let decorators: Array<Function> = injector.get(ACTION_CONFIG);
 
     // process filters
     if (isArray(metadata.filters)) {
@@ -526,7 +512,7 @@ export class ControllerResolver {
     this.benchmark("Request", requestStart);
 
     // render action call
-    return injector.get(Chain.toString());
+    return await injector.get(Chain.toString());
   }
 
   /**
@@ -538,7 +524,7 @@ export class ControllerResolver {
    * Print benchmark
    */
   private benchmark(message: string, start: number) {
-    this.logger.trace(`${message}: ${(Date.now() - start)}ms`, {
+    this.logger.silly(`${message}: ${(Date.now() - start)}ms`, {
       method: toHttpMethod(this.resolvedRoute.method),
       route: this.resolvedRoute.route,
       url: this.request.url

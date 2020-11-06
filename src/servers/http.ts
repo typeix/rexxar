@@ -1,14 +1,13 @@
 import {createServer, IncomingMessage, ServerResponse} from "http";
-import {ModuleInjector} from "@typeix/modules";
+import {ModuleInjector, Module} from "@typeix/modules";
 import {isString, isDefined} from "@typeix/utils";
 import {fireRequest} from "../resolvers/request";
-import {BOOTSTRAP_MODULE, RootModule, RootModuleMetadata} from "../decorators/module";
+import {BOOTSTRAP_MODULE, RootModuleMetadata} from "../decorators/module";
 import {RouterError} from "@typeix/router";
 import {getClassMetadata} from "@typeix/metadata";
-import {Logger} from "log4js";
-import {Action, After, AfterEach, Before, BeforeEach, Chain, ErrorMessage, LOGGER, Param} from "../index";
-import {REXXAR_CONFIG} from "./constants";
-import {Inject} from "@typeix/di";
+import {Action, After, AfterEach, Before, BeforeEach} from "../index";
+import {ACTION_CONFIG} from "./constants";
+import {Logger} from "@typeix/logger";
 
 export interface HttpServerConfig {
   port: number;
@@ -22,20 +21,20 @@ export interface HttpServerConfig {
  * @name httpServer
  * @param {Function} Class httpServer class
  * @param {Number} config HttpServerConfig
- * @returns {Injector}
+ * @returns {ModuleInjector}
  *
  * @description
  * Use httpServer function to httpServer an Module.
  */
 export function httpServer(Class: Function, config: HttpServerConfig): ModuleInjector {
 
-  let metadata: RootModuleMetadata = getClassMetadata(RootModule, Class)?.args;
+  let metadata: RootModuleMetadata = getClassMetadata(Module, Class)?.args;
   if (metadata.name != BOOTSTRAP_MODULE) {
     throw new RouterError(500, "Server must be initialized on @RootModule", {});
   }
   let moduleInjector = ModuleInjector.createAndResolve(Class, metadata.shared_providers);
   let injector = moduleInjector.getInjector(Class);
-  let logger: Logger = injector.get(LOGGER);
+  let logger: Logger = injector.get(Logger);
 
   /**
    * Set config
@@ -44,7 +43,7 @@ export function httpServer(Class: Function, config: HttpServerConfig): ModuleInj
     config.actions = [BeforeEach, Before, Action, After, AfterEach];
   }
 
-  injector.set(REXXAR_CONFIG, config)
+  injector.set(ACTION_CONFIG, config.actions);
 
   let server = createServer();
 

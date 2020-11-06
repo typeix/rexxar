@@ -11,7 +11,7 @@ import {createMethodDecorator} from "@typeix/metadata";
  */
 
 export function BeforeEach() {
-  return createMethodDecorator(BeforeEach);
+  return createMethodDecorator(BeforeEach, {value: null});
 }
 
 /**
@@ -24,7 +24,7 @@ export function BeforeEach() {
  * After each action
  */
 export function AfterEach() {
-  return createMethodDecorator(AfterEach);
+  return createMethodDecorator(AfterEach, {value: null});
 }
 /**
  * Action decorator
@@ -32,13 +32,13 @@ export function AfterEach() {
  * @function
  * @name Action
  *
- * @param {String} name
+ * @param {String} value
  *
  * @description
  * Define name of action to class
  */
-export function Action(name: string) {
-  return createMethodDecorator(Action, {name});
+export function Action(value: string) {
+  return createMethodDecorator(Action, {value});
 }
 /**
  * Before Action decorator
@@ -46,13 +46,13 @@ export function Action(name: string) {
  * @function
  * @name Before
  *
- * @param {String} name
+ * @param {String} value
  *
  * @description
  * Define name of before action to class
  */
-export function Before(name: string) {
-  return createMethodDecorator(Before, {name});
+export function Before(value: string) {
+  return createMethodDecorator(Before, {value});
 }
 /**
  * After Action decorator
@@ -60,11 +60,11 @@ export function Before(name: string) {
  * @function
  * @name After
  *
- * @param {String} name
+ * @param {String} value
  *
  * @description
  * Define name of after action to class
  */
-export function After(name: string) {
-  return createMethodDecorator(After, {name});
+export function After(value: string) {
+  return createMethodDecorator(After, {value});
 }

@@ -2,20 +2,23 @@ import {Readable, Writable} from "stream";
 import {Socket} from "net";
 import {EventEmitter} from "events";
 import {IncomingMessage, ServerResponse} from "http";
-import {isArray, isObject, uuid} from "@typeix/utils";
+import {isArray, isDefined, isObject, uuid} from "@typeix/utils";
 import {Inject, Injector, IProvider, verifyProvider} from "@typeix/di";
-import {ModuleInjector} from "@typeix/modules";
+import {ModuleInjector, Module} from "@typeix/modules";
 import {ControllerResolver} from "../resolvers/controller";
 import {fireRequest} from "../resolvers/request";
 import {IResolvedRoute, HttpMethod, RouterError} from "@typeix/router";
-import {Controller, IControllerMetadata, RootModule} from "../decorators";
+import {Action, After, AfterEach, Before, BeforeEach, Controller, IControllerMetadata} from "../decorators";
 import {BOOTSTRAP_MODULE, RootModuleMetadata} from "../decorators/module";
 import {getClassMetadata} from "@typeix/metadata";
-import {LOGGER} from "../index";
+import {ACTION_CONFIG} from "../servers/constants";
+import {Logger} from "@typeix/logger";
 
 
 export interface IFakeServerConfig {
+  actions?: Array<Function>;
 }
+
 
 /**
  * @since 1.0.0
@@ -29,12 +32,22 @@ export interface IFakeServerConfig {
  * Use fakeHttpServer for testing only
  */
 
-export function fakeHttpServer(Class: Function, config?: IFakeServerConfig): FakeServerApi {
-  let metadata: RootModuleMetadata = getClassMetadata(RootModule, Class)?.args;
+export function fakeHttpServer(Class: Function, config: IFakeServerConfig = {}): FakeServerApi {
+  let metadata: RootModuleMetadata = getClassMetadata(Module, Class)?.args;
   if (metadata?.name != BOOTSTRAP_MODULE) {
     throw new RouterError(500, "fakeHttpServer must be initialized on @RootModule", metadata);
   }
   let moduleInjector = ModuleInjector.createAndResolve(Class, isArray(metadata.shared_providers) ? metadata.shared_providers : []);
+  let injector = moduleInjector.getInjector(Class);
+  /**
+   * Set config
+   */
+  if (!isDefined(config.actions)) {
+    config.actions = [BeforeEach, Before, Action, After, AfterEach];
+  }
+
+  injector.set(ACTION_CONFIG, config.actions);
+
   let fakeServerInjector = Injector.createAndResolve(FakeServerApi, [
     {provide: ModuleInjector, useValue: moduleInjector}
   ]);
@@ -89,9 +102,14 @@ export function fakeControllerActionCall(injector: Injector,
     {provide: EventEmitter, useValue: new EventEmitter()}
   ];
   // if there is no logger provide it
-  if (!injector.has(LOGGER)) {
-    providers.push(verifyProvider(LOGGER));
+  if (!injector.has(Logger)) {
+    providers.push(verifyProvider(Logger));
   }
+
+  if (!injector.has(ACTION_CONFIG)) {
+    injector.set(ACTION_CONFIG, [BeforeEach, Before, Action, After, AfterEach]);
+  }
+
   /**
    * Create and resolve
    */

@@ -43,5 +43,4 @@ export {
 export * from "@typeix/router";
 export * from "@typeix/di";
 export * from "@typeix/utils";
-export const LOGGER = "@typeix/rexar/logger";
 
