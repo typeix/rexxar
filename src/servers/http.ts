@@ -32,18 +32,15 @@ export function httpServer(Class: Function, config: HttpServerConfig): ModuleInj
   if (metadata.name != BOOTSTRAP_MODULE) {
     throw new RouterError(500, "Server must be initialized on @RootModule", {});
   }
+
+  metadata.shared_providers.push({
+    provide: ACTION_CONFIG,
+    useValue: isDefined(config.actions) ? config.actions : [BeforeEach, Before, Action, After, AfterEach]
+  });
+
   let moduleInjector = ModuleInjector.createAndResolve(Class, metadata.shared_providers);
   let injector = moduleInjector.getInjector(Class);
   let logger: Logger = injector.get(Logger);
-
-  /**
-   * Set config
-   */
-  if (!isDefined(config.actions)) {
-    config.actions = [BeforeEach, Before, Action, After, AfterEach];
-  }
-
-  injector.set(ACTION_CONFIG, config.actions);
 
   let server = createServer();
 

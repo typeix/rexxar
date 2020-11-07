@@ -6,7 +6,7 @@ import {FakeIncomingMessage, FakeServerResponse} from "../helpers/mocks";
 import {LAMBDA_CONTEXT, LAMBDA_EVENT, ACTION_CONFIG} from "./constants";
 import {RouterError} from "@typeix/router";
 import {getClassMetadata} from "@typeix/metadata";
-import {Action} from "../index";
+import {Action, After, AfterEach, Before, BeforeEach} from "../index";
 import {Logger} from "@typeix/logger";
 
 export interface LambdaServerConfig {
@@ -46,18 +46,15 @@ export function lambdaServer(Class: Function, config: LambdaServerConfig = {}) {
   if (metadata.name != BOOTSTRAP_MODULE) {
     throw new RouterError(500, "Server must be initialized on @RootModule", metadata);
   }
+
+  metadata.shared_providers.push({
+    provide: ACTION_CONFIG,
+    useValue: isDefined(config.actions) ? config.actions : [Action]
+  });
+
   let moduleInjector = ModuleInjector.createAndResolve(Class, metadata.shared_providers);
   let injector = moduleInjector.getInjector(Class);
   let logger: Logger = injector.get(Logger);
-
-  /**
-   * Set config
-   */
-  if (!isDefined(config.actions)) {
-    config.actions = [Action];
-  }
-
-  injector.set(ACTION_CONFIG, config.actions);
 
   logger.info("Module.info: Lambda Server started");
   return async (event: any, context: any, callback: any) => {

@@ -16,6 +16,7 @@ export interface HttpsServerConfig {
   hostname?: string;
   actions?: Array<Function>;
 }
+
 /**
  * @since 1.0.0
  * @function
@@ -33,22 +34,19 @@ export function httpsServer(Class: Function, config: HttpsServerConfig): ModuleI
   if (metadata?.name != BOOTSTRAP_MODULE) {
     throw new RouterError(500, "Server must be initialized on @RootModule", metadata);
   }
+
+  metadata.shared_providers.push({
+    provide: ACTION_CONFIG,
+    useValue: isDefined(config.actions) ? config.actions : [BeforeEach, Before, Action, After, AfterEach]
+  });
+
   let moduleInjector = ModuleInjector.createAndResolve(Class, metadata.shared_providers);
   let injector = moduleInjector.getInjector(Class);
   let logger: Logger = injector.get(Logger);
 
-  /**
-   * Set config
-   */
-  if (!isDefined(config.actions)) {
-    config.actions = [BeforeEach, Before, Action, After, AfterEach];
-  }
-
-  injector.set(ACTION_CONFIG, config.actions);
-
 
   let server = createServer(config.options, (request: IncomingMessage, response: ServerResponse) =>
-      fireRequest(moduleInjector, request, response)
+    fireRequest(moduleInjector, request, response)
   );
   if (isString(config.hostname)) {
     server.listen(config.port, config.hostname);
