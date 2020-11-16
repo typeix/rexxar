@@ -6,10 +6,12 @@ import {FakeIncomingMessage, FakeServerResponse} from "../helpers/mocks";
 import {LAMBDA_CONTEXT, LAMBDA_EVENT, ACTION_CONFIG} from "./constants";
 import {RouterError} from "@typeix/router";
 import {getClassMetadata} from "@typeix/metadata";
-import {Action, After, AfterEach, Before, BeforeEach} from "../index";
+import {Action} from "../index";
 import {Logger} from "@typeix/logger";
 
 export interface LambdaServerConfig {
+  path?: string;
+  httpMethod?: string;
   actions?: Array<Function>;
 }
 
@@ -70,7 +72,7 @@ export function lambdaServer(Class: Function, config: LambdaServerConfig = {}) {
         fakeRequest.url += "?" + Object
           .keys(event.multiValueQueryStringParameters)
           .map(k => event.multiValueQueryStringParameters[k].map(v => k + "=" + v).join("&"))
-          .join("&")
+          .join("&");
       }
       if (event.body) {
         process.nextTick(() => {
@@ -78,22 +80,30 @@ export function lambdaServer(Class: Function, config: LambdaServerConfig = {}) {
           fakeRequest.emit("end");
         });
       }
+    } else if (isProxyEvent(config)) {
+      fakeRequest.url = config.path;
+      fakeRequest.method = config.httpMethod;
     }
     let response = new FakeServerResponse();
-    let body = await fireRequest(moduleInjector, fakeRequest, response);
-    logger.debug(LAMBDA_EVENT + "_RESPONSE_" + context.awsRequestId, body);
-    if (isProxyEvent(event)) {
-      if (body instanceof Buffer) {
-        body = <string>body.toString('utf8');
+    try {
+      let body = await fireRequest(moduleInjector, fakeRequest, response);
+      logger.debug(LAMBDA_EVENT + "_RESPONSE_" + context.awsRequestId, body);
+      if (isProxyEvent(event)) {
+        if (body instanceof Buffer) {
+          body = <string>body.toString('utf8');
+        }
+        return callback(null, {
+          body: body,
+          headers: <any>response.getHeaders(),
+          statusCode: response.getStatusCode(),
+          isBase64Encoded: event.isBase64Encoded
+        })
+      } else {
+        return callback(null, body);
       }
-      return callback(null, {
-        body: body,
-        headers: <any>response.getHeaders(),
-        statusCode: response.getStatusCode(),
-        isBase64Encoded: event.isBase64Encoded
-      })
-    } else {
-      return callback(null, body);
+    } catch (e) {
+      logger.error(LAMBDA_EVENT + "_RESPONSE_" + context.awsRequestId, e);
+      return callback(e);
     }
   }
 }
