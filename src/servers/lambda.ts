@@ -60,7 +60,7 @@ function isRoutingEvent(event: any): boolean {
  * @description
  * Use httpsServer function to https an Module.
  */
-declare type LambdaInterceptor = (
+export declare type LambdaInterceptor = (
   request: {
     event: any,
     context: any,
