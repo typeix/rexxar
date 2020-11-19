@@ -1,7 +1,7 @@
 import {ModuleInjector, Module} from "@typeix/modules";
-import {isDefined, isString} from "@typeix/utils";
+import {isDefined, isFunction, isObject, isString} from "@typeix/utils";
 import {fireRequest} from "../resolvers/request";
-import {BOOTSTRAP_MODULE,  RootModuleMetadata} from "../decorators/module";
+import {BOOTSTRAP_MODULE, RootModuleMetadata} from "../decorators/module";
 import {FakeIncomingMessage, FakeServerResponse} from "../helpers/mocks";
 import {LAMBDA_CONTEXT, LAMBDA_EVENT, ACTION_CONFIG} from "./constants";
 import {RouterError} from "@typeix/router";
@@ -18,32 +18,61 @@ export interface LambdaServerConfig {
 /**
  * @since 2.1.0
  * @function
- * @name isProxyAuthEvent
+ * @name isGatewayProxyAuthEvent
  * @param {Function} event
  */
-function isProxyAuthEvent(event: any): boolean {
+function isGatewayProxyAuthEvent(event: any): boolean {
   return isString(event.type) && isString(event.methodArn);
 }
+
 /**
  * @since 2.1.0
  * @function
- * @name isProxyEvent
+ * @name isGatewayProxyEvent
  * @param {Function} event
  */
-function isProxyEvent(event: any): boolean {
-  return isString(event.path) && isString(event.httpMethod) && !isProxyAuthEvent(event);
+function isGatewayProxyEvent(event: any): boolean {
+  return isRoutingEvent(event) &&
+    isObject(event.requestContext) &&
+    isString(event.requestContext.resourceId) &&
+    isString(event.requestContext.requestId) &&
+    isString(event.requestContext.apiId);
 }
+
+/**
+ * @since 4.0.6
+ * @function
+ * @name isRoutingEvent
+ * @param {Function} event
+ */
+function isRoutingEvent(event: any): boolean {
+  return isString(event.path) && isString(event.httpMethod);
+}
+
 /**
  * @since 2.1.0
  * @function
  * @name lambdaServer
  * @param {Function} Class httpsServer class
  * @param {LambdaServerConfig} config lambda server config
+ * @param {Function} interceptor
  *
  * @description
  * Use httpsServer function to https an Module.
  */
-export function lambdaServer(Class: Function, config: LambdaServerConfig = {}) {
+declare type LambdaInterceptor = (
+  request: {
+    event: any,
+    context: any,
+    isGatewayProxyEvent: boolean,
+    isGatewayProxyAuthEvent: boolean
+  },
+  forward: (route: string, method: string) => void
+) => void;
+
+export function lambdaServer(Class: Function,
+                             config: LambdaServerConfig = {},
+                             interceptor?: LambdaInterceptor) {
   let metadata: RootModuleMetadata = getClassMetadata(Module, Class)?.args;
   if (metadata.name != BOOTSTRAP_MODULE) {
     throw new RouterError(500, "Server must be initialized on @RootModule", metadata);
@@ -60,18 +89,38 @@ export function lambdaServer(Class: Function, config: LambdaServerConfig = {}) {
 
   logger.info("Module.info: Lambda Server started");
   return async (event: any, context: any, callback: any) => {
+    let fakeRequest = new FakeIncomingMessage();
+    if (isFunction(interceptor)) {
+      interceptor(
+        {
+          event: Object.assign({}, event),
+          context: Object.assign({}, context),
+          isGatewayProxyEvent: isGatewayProxyEvent(event),
+          isGatewayProxyAuthEvent: isGatewayProxyAuthEvent(event)
+        },
+        (route: string, method: string) => {
+          event.path = route;
+          event.httpMethod = method;
+          logger.debug("Forwarding", event);
+        }
+      );
+    }
     logger.debug(LAMBDA_EVENT + "_" + context.awsRequestId, event);
     logger.debug(LAMBDA_CONTEXT + "_" + context.awsRequestId, context);
     injector.set(LAMBDA_EVENT, event);
     injector.set(LAMBDA_CONTEXT, context);
-    let fakeRequest = new FakeIncomingMessage();
-    if (isProxyEvent(event)) {
+    if (isGatewayProxyEvent(event)) {
       fakeRequest.url = event.path;
       fakeRequest.method = event.httpMethod;
       if (event.multiValueQueryStringParameters) {
-        fakeRequest.url += "?" + Object
-          .keys(event.multiValueQueryStringParameters)
-          .map(k => event.multiValueQueryStringParameters[k].map(v => k + "=" + v).join("&"))
+        fakeRequest.url += "?" + Reflect
+          .ownKeys(event.multiValueQueryStringParameters)
+          .map(k => event.multiValueQueryStringParameters[k].map(v => k.toString() + "=" + v).join("&"))
+          .join("&");
+      } else if (event.queryStringParameters) {
+        fakeRequest.url += "?" + Reflect
+          .ownKeys(event.queryStringParameters)
+          .map(k => k.toString() + "=" + event.queryStringParameters[k])
           .join("&");
       }
       if (event.body) {
@@ -80,23 +129,31 @@ export function lambdaServer(Class: Function, config: LambdaServerConfig = {}) {
           fakeRequest.emit("end");
         });
       }
-    } else if (isProxyEvent(config)) {
-      fakeRequest.url = config.path;
-      fakeRequest.method = config.httpMethod;
+    } else if (!isRoutingEvent(event) && isRoutingEvent(config)) {
+      event.path = config.path;
+      event.httpMethod = config.httpMethod;
+    } else {
+      event.path = "/";
+      event.httpMethod = "GET";
+      logger.warn("No routing provided forwarding to default route", event);
+      logger.warn("Use LambdaInterceptor forwarder os set explicit route via LambdaServerConfig")
     }
     let response = new FakeServerResponse();
     try {
       let body = await fireRequest(moduleInjector, fakeRequest, response);
       logger.debug(LAMBDA_EVENT + "_RESPONSE_" + context.awsRequestId, body);
-      if (isProxyEvent(event)) {
-        if (body instanceof Buffer) {
-          body = <string>body.toString('utf8');
-        }
+      if (body instanceof Buffer) {
+        body = <string>body.toString();
+      } else if (isObject(body)) {
+        body = JSON.stringify(body);
+      }
+      if (isGatewayProxyEvent(event)) {
         return callback(null, {
           body: body,
-          headers: <any>response.getHeaders(),
+          headers: filterHeaders(response.getHeaders()),
           statusCode: response.getStatusCode(),
-          isBase64Encoded: event.isBase64Encoded
+          isBase64Encoded: event.isBase64Encoded,
+          multiValueHeaders: filterHeaders(response.getHeaders(), true),
         })
       } else {
         return callback(null, body);
@@ -108,3 +165,22 @@ export function lambdaServer(Class: Function, config: LambdaServerConfig = {}) {
   }
 }
 
+/**
+ * Filter headers
+ * @param headers
+ * @param multi
+ */
+function filterHeaders(headers: Object, multi = false) {
+  return Reflect.ownKeys(headers)
+    .filter(key => !!multi ? Array.isArray(headers[key]) : isString(headers[key]))
+    .map(key => {
+      return {
+        key,
+        value: headers[key]
+      };
+    })
+    .reduce((acc, entry) => {
+      acc[entry.key] = entry.value;
+      return acc;
+    }, {});
+}
