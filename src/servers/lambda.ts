@@ -1,5 +1,4 @@
 import {ModuleInjector, Module} from "@typeix/modules";
-import {Injector} from "@typeix/di";
 import {isDefined, isFunction, isObject, isString, isUndefined} from "@typeix/utils";
 import {fireRequest} from "../resolvers/request";
 import {BOOTSTRAP_MODULE, RootModuleMetadata} from "../decorators/module";
