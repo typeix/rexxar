@@ -1,4 +1,5 @@
 import {ModuleInjector, Module} from "@typeix/modules";
+import {Injector} from "@typeix/di";
 import {isDefined, isFunction, isObject, isString} from "@typeix/utils";
 import {fireRequest} from "../resolvers/request";
 import {BOOTSTRAP_MODULE, RootModuleMetadata} from "../decorators/module";
@@ -83,7 +84,11 @@ export function lambdaServer(Class: Function,
     useValue: isDefined(config.actions) ? config.actions : [Action]
   });
 
-  let moduleInjector = ModuleInjector.createAndResolve(Class, metadata.shared_providers);
+  let moduleInjector = ModuleInjector.createAndResolve(
+    Class,
+    metadata.shared_providers,
+    [LAMBDA_EVENT, LAMBDA_CONTEXT]
+  );
   let injector = moduleInjector.getInjector(Class);
   let logger: Logger = injector.get(Logger);
 

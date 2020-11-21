@@ -1,6 +1,6 @@
- {
+{
   "name": "@typeix/rexxar",
-  "version": "4.0.7",
+  "version": "4.0.9",
   "description": "mvc framework for typescript",
   "main": "build/index.js",
   "scripts": {
@@ -38,7 +38,7 @@
     "@typeix/di": "^4.0.3",
     "@typeix/logger": "^4.0.0",
     "@typeix/metadata": "^4.0.0",
-    "@typeix/modules": "^4.0.2",
+    "@typeix/modules": "^4.0.3",
     "@typeix/router": "^4.0.0",
     "@typeix/utils": "^4.0.0"
   },
