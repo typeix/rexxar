@@ -104,9 +104,12 @@ export function lambdaServer(Class: Function,
           isGatewayProxyAuthEvent: isGatewayProxyAuthEvent(event)
         },
         (route: string, method: string) => {
-          event.path = route;
-          event.httpMethod = method;
-          logger.debug("Forwarding", event);
+          fakeRequest.url = route;
+          fakeRequest.method = method;
+          logger.debug("Forwarding", {
+            route,
+            method
+          });
         }
       );
     }
@@ -135,15 +138,11 @@ export function lambdaServer(Class: Function,
         });
       }
     } else if (!isRoutingEvent(event) && isRoutingEvent(config)) {
-      event.path = config.path;
-      event.httpMethod = config.httpMethod;
-      fakeRequest.url = event.path;
-      fakeRequest.method = event.httpMethod;
+      fakeRequest.url = config.path;
+      fakeRequest.method = config.httpMethod;
     } else if (isUndefined(event.path) && isUndefined(event.httpMethod)) {
-      event.path = "/";
-      event.httpMethod = "GET";
-      fakeRequest.url = event.path;
-      fakeRequest.method = event.httpMethod;
+      fakeRequest.url = "/";
+      fakeRequest.method = "GET";
       logger.warn("No routing provided forwarding to default route", event);
       logger.warn("Use LambdaInterceptor forwarder os set explicit route via LambdaServerConfig");
     }
