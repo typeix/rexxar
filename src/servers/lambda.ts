@@ -139,7 +139,7 @@ export function lambdaServer(Class: Function,
     } else if (!isRoutingEvent(event) && isRoutingEvent(config)) {
       fakeRequest.url = config.path;
       fakeRequest.method = config.httpMethod;
-    } else if (isUndefined(event.path) && isUndefined(event.httpMethod)) {
+    } else if (isUndefined(fakeRequest.url) && isUndefined(fakeRequest.method)) {
       fakeRequest.url = "/";
       fakeRequest.method = "GET";
       logger.warn("No routing provided forwarding to default route", event);
