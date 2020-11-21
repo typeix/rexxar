@@ -1,6 +1,6 @@
 import {ModuleInjector, Module} from "@typeix/modules";
 import {Injector} from "@typeix/di";
-import {isDefined, isFunction, isObject, isString} from "@typeix/utils";
+import {isDefined, isFunction, isObject, isString, isUndefined} from "@typeix/utils";
 import {fireRequest} from "../resolvers/request";
 import {BOOTSTRAP_MODULE, RootModuleMetadata} from "../decorators/module";
 import {FakeIncomingMessage, FakeServerResponse} from "../helpers/mocks";
@@ -137,11 +137,15 @@ export function lambdaServer(Class: Function,
     } else if (!isRoutingEvent(event) && isRoutingEvent(config)) {
       event.path = config.path;
       event.httpMethod = config.httpMethod;
-    } else {
+      fakeRequest.url = event.path;
+      fakeRequest.method = event.httpMethod;
+    } else if (isUndefined(event.path) && isUndefined(event.httpMethod)) {
       event.path = "/";
       event.httpMethod = "GET";
+      fakeRequest.url = event.path;
+      fakeRequest.method = event.httpMethod;
       logger.warn("No routing provided forwarding to default route", event);
-      logger.warn("Use LambdaInterceptor forwarder os set explicit route via LambdaServerConfig")
+      logger.warn("Use LambdaInterceptor forwarder os set explicit route via LambdaServerConfig");
     }
     let response = new FakeServerResponse();
     try {
