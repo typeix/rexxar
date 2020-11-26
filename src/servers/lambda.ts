@@ -94,6 +94,7 @@ export function lambdaServer(Class: Function,
   logger.info("Module.info: Lambda Server started");
   return async (event: any, context: any, callback: any) => {
     let fakeRequest = new FakeIncomingMessage();
+    fakeRequest.headers = {};
     if (isFunction(interceptor)) {
       interceptor(
         {
@@ -119,6 +120,7 @@ export function lambdaServer(Class: Function,
     if (isGatewayProxyEvent(event)) {
       fakeRequest.url = event.path;
       fakeRequest.method = event.httpMethod;
+      fakeRequest.headers = event.input?.headers || {};
       if (event.multiValueQueryStringParameters) {
         fakeRequest.url += "?" + Reflect
           .ownKeys(event.multiValueQueryStringParameters)
@@ -154,6 +156,7 @@ export function lambdaServer(Class: Function,
       } else if (isObject(body)) {
         body = JSON.stringify(body);
       }
+      response.emit("finish");
       if (isGatewayProxyEvent(event)) {
         return callback(null, {
           body: body,
@@ -167,6 +170,7 @@ export function lambdaServer(Class: Function,
       }
     } catch (e) {
       logger.error(LAMBDA_EVENT + "_RESPONSE_" + context.awsRequestId, e);
+      response.emit("finish");
       return callback(e);
     }
   }

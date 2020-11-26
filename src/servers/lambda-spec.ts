@@ -14,7 +14,6 @@ import {LambdaEvent} from "../decorators/lambda";
 import {Logger} from "@typeix/logger";
 
 
-
 describe("fakeHttpServer", () => {
 
   let handler: Function;
@@ -77,66 +76,103 @@ describe("fakeHttpServer", () => {
     requestContext: requestContext
   };
 
+  @Controller({
+    name: "core"
+  })
+  class MyController {
+
+    @Inject(Request)
+    private request: Request;
+
+    @LambdaEvent()
+    private event: APIGatewayProxyEvent;
+
+    @Produces("application/json")
+    @Action("index")
+    actionIndex() {
+      return this.event;
+    }
+
+    @Produces("application/json")
+    @Action("property")
+    actionProperty(@LambdaEvent() event) {
+      return event;
+    }
+  }
+
+
+  @RootModule({
+    providers: [
+      Logger,
+      Router
+    ],
+    controllers: [MyController]
+  })
+  class MyModule implements IAfterConstruct {
+    afterConstruct(): void {
+      this.router.addRules([
+        {
+          methods: [HttpMethod.GET],
+          url: "/",
+          route: "core/index"
+        },
+        {
+          methods: [HttpMethod.GET],
+          url: "/property",
+          route: "core/property"
+        }
+      ]);
+    }
+
+    @Inject() private logger: Logger;
+
+    @Inject() private router: Router;
+  }
+
   beforeEach(() => {
-
-    let lambdaEvent;
-
-    @Controller({
-      name: "core"
-    })
-    class MyController {
-
-      @Inject(Request)
-      private request: Request;
-
-      @LambdaEvent()
-      private event: APIGatewayProxyEvent;
-
-      @Produces("application/json")
-      @Action("index")
-      actionIndex() {
-        return this.event;
-      }
-
-      @Produces("application/json")
-      @Action("property")
-      actionProperty(@LambdaEvent() event) {
-        return event;
-      }
-    }
-
-
-    @RootModule({
-      providers: [
-        Logger,
-        Router
-      ],
-      controllers: [MyController]
-    })
-    class MyModule implements IAfterConstruct {
-      afterConstruct(): void {
-        this.router.addRules([
-          {
-            methods: [HttpMethod.GET],
-            url: "/",
-            route: "core/index"
-          },
-          {
-            methods: [HttpMethod.GET],
-            url: "/property",
-            route: "core/property"
-          }
-        ]);
-      }
-
-      @Inject() private logger: Logger;
-
-      @Inject() private router: Router;
-    }
-
     handler = lambdaServer(MyModule);
   });
 
+  it("LambdaInterceptor core/index", (done) => {
+    let context = {};
+    handler = lambdaServer(MyModule, {}, (request, forward) => {
+      forward("/property", "GET");
+    });
+    let event1 = {
+      "Records": [
+        {
+          "eventID": "1",
+          "eventName": "INSERT",
+          "eventVersion": "1.0",
+          "eventSource": "aws:dynamodb",
+          "awsRegion": "us-east-1",
+          "dynamodb": {
+            "Keys": {
+              "Id": {
+                "N": "101"
+              }
+            },
+            "NewImage": {
+              "Message": {
+                "S": "New item!"
+              },
+              "Id": {
+                "N": "101"
+              }
+            },
+            "SequenceNumber": "111",
+            "SizeBytes": 26,
+            "StreamViewType": "NEW_AND_OLD_IMAGES"
+          },
+          "eventSourceARN": "stream-ARN"
+        }
+      ]
+    };
+    handler(event1, context, (error, data) => {
+      expect(data).toEqual(JSON.stringify(event1));
+      done();
+    }).catch(done);
+  });
 
   it("Api Gateway Check core/index", (done) => {
     let context = {};

@@ -375,9 +375,7 @@ export class FakeIncomingMessage extends Readable implements IncomingMessage {
   aborted: boolean;
   complete: boolean;
 
-  _read(size: number): void {
-    console.log("_read");
-  }
+  _read(size: number): void {}
 
   setTimeout(msecs: number, callback: () => void): this {
     setTimeout(callback, msecs);
@@ -385,8 +383,7 @@ export class FakeIncomingMessage extends Readable implements IncomingMessage {
   }
 
   destroy(error?: Error) {
-    console.log(error);
-    console.log("destroy");
+    console.error(error);
   }
 
 
