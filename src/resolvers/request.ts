@@ -20,6 +20,7 @@ import {BOOTSTRAP_MODULE} from "../decorators/module";
 import {LAMBDA_CONTEXT, LAMBDA_EVENT} from "../servers";
 import {getClassMetadata} from "@typeix/metadata";
 import {Logger} from "@typeix/logger";
+import {UProvider} from "../../../di/src/interfaces";
 
 /**
  * @since 1.0.0
@@ -81,6 +82,7 @@ export interface IModule {
  * @param {ModuleInjector} moduleInjector module injector
  * @param {IncomingMessage} request event emitter
  * @param {ServerResponse} response event emitter
+ * @param {Array<UProvider>} providers extended request providers
  * @return {string|Buffer} data from controller
  *
  * @description
@@ -89,7 +91,8 @@ export interface IModule {
  */
 export function fireRequest(moduleInjector: ModuleInjector,
                             request: IncomingMessage,
-                            response: ServerResponse): Promise<string | Buffer> {
+                            response: ServerResponse,
+                            providers: Array<UProvider> = []): Promise<string | Buffer> {
   let moduleList = <Array<{ token: any, metadata: any }>>moduleInjector.getAllMetadata();
   let rootModuleMetadata = moduleList.find(item => item.metadata.name === BOOTSTRAP_MODULE);
   if (!isDefined(rootModuleMetadata)) {
@@ -103,7 +106,7 @@ export function fireRequest(moduleInjector: ModuleInjector,
   let routeResolverInjector = Injector.createAndResolveChild(
     rootInjector,
     RequestResolver,
-    [
+    providers.concat([
       {provide: "url", useValue: parse(request.url, true)},
       {provide: "UUID", useValue: uuid()},
       {provide: "data", useValue: []},
@@ -113,7 +116,7 @@ export function fireRequest(moduleInjector: ModuleInjector,
       {provide: "response", useValue: response},
       {provide: ModuleInjector, useValue: moduleInjector},
       {provide: EventEmitter, useValue: new EventEmitter()}
-    ]
+    ])
   );
   /**
    * Get RequestResolver instance
@@ -453,6 +456,18 @@ export class RequestResolver implements IAfterConstruct {
       {provide: RouterError.toString(), useValue: isTruthy(error) ? error : new RouterError(500, "", {})},
       {provide: EventEmitter, useValue: this.eventEmitter}
     ];
+    /**
+     * Forward values
+     */
+    [LAMBDA_CONTEXT, LAMBDA_EVENT].forEach(key => {
+      if (this.injector.has(key)) {
+        providers.push({
+          provide: key,
+          useValue: this.injector.get(key)
+        });
+      }
+    });
+
     /**
      * Create and resolve
      */

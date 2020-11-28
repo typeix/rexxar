@@ -85,8 +85,7 @@ export function lambdaServer(Class: Function,
 
   let moduleInjector = ModuleInjector.createAndResolve(
     Class,
-    metadata.shared_providers,
-    [LAMBDA_EVENT, LAMBDA_CONTEXT]
+    metadata.shared_providers
   );
   let injector = moduleInjector.getInjector(Class);
   let logger: Logger = injector.get(Logger);
@@ -115,8 +114,6 @@ export function lambdaServer(Class: Function,
     }
     logger.debug(LAMBDA_EVENT + "_" + context.awsRequestId, event);
     logger.debug(LAMBDA_CONTEXT + "_" + context.awsRequestId, context);
-    injector.set(LAMBDA_EVENT, event);
-    injector.set(LAMBDA_CONTEXT, context);
     if (isGatewayProxyEvent(event)) {
       fakeRequest.url = event.path;
       fakeRequest.method = event.httpMethod;
@@ -151,7 +148,16 @@ export function lambdaServer(Class: Function,
       } else {
         process.nextTick(() => fakeRequest.emit("end"));
       }
-      let body = await fireRequest(moduleInjector, fakeRequest, response);
+      let body = await fireRequest(moduleInjector, fakeRequest, response, [
+        {
+          provide: LAMBDA_EVENT,
+          useValue: event
+        },
+        {
+          provide: LAMBDA_CONTEXT,
+          useValue: context
+        }
+      ]);
       logger.debug(LAMBDA_EVENT + "_RESPONSE_" + context.awsRequestId, body);
       if (body instanceof Buffer) {
         body = <string>body.toString();
