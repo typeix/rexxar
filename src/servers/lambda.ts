@@ -149,7 +149,7 @@ export function lambdaServer(Class: Function,
           fakeRequest.emit("end");
         });
       } else {
-        fakeRequest.emit("end");
+        process.nextTick(() => fakeRequest.emit("end"));
       }
       let body = await fireRequest(moduleInjector, fakeRequest, response);
       logger.debug(LAMBDA_EVENT + "_RESPONSE_" + context.awsRequestId, body);
