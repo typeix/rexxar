@@ -1,6 +1,6 @@
 {
   "name": "@typeix/rexxar",
-  "version": "4.0.14",
+  "version": "4.0.15",
   "description": "mvc framework for typescript",
   "main": "build/index.js",
   "scripts": {

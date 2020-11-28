@@ -132,12 +132,6 @@ export function lambdaServer(Class: Function,
           .map(k => k.toString() + "=" + event.queryStringParameters[k])
           .join("&");
       }
-      if (event.body) {
-        process.nextTick(() => {
-          fakeRequest.emit("data", event.body);
-          fakeRequest.emit("end");
-        });
-      }
     } else if (!isRoutingEvent(event) && isRoutingEvent(config)) {
       fakeRequest.url = config.path;
       fakeRequest.method = config.httpMethod;
@@ -149,6 +143,14 @@ export function lambdaServer(Class: Function,
     }
     let response = new FakeServerResponse();
     try {
+      if (isString(event.body)) {
+        process.nextTick(() => {
+          fakeRequest.emit("data", event.body);
+          fakeRequest.emit("end");
+        });
+      } else {
+        fakeRequest.emit("end");
+      }
       let body = await fireRequest(moduleInjector, fakeRequest, response);
       logger.debug(LAMBDA_EVENT + "_RESPONSE_" + context.awsRequestId, body);
       if (body instanceof Buffer) {
