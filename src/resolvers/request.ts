@@ -1,4 +1,4 @@
-import {IAfterConstruct, Inject, Injectable, Injector, IProvider, verifyProvider} from "@typeix/di";
+import {IAfterConstruct, Inject, Injectable, Injector, IProvider, UProvider, verifyProvider} from "@typeix/di";
 import {
   isDefined,
   isEqual,
@@ -20,7 +20,6 @@ import {BOOTSTRAP_MODULE} from "../decorators/module";
 import {LAMBDA_CONTEXT, LAMBDA_EVENT} from "../servers";
 import {getClassMetadata} from "@typeix/metadata";
 import {Logger} from "@typeix/logger";
-import {UProvider} from "../../../di/src/interfaces";
 
 /**
  * @since 1.0.0
