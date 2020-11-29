@@ -1,5 +1,5 @@
 import {Action, Controller, Produces, RootModule} from "../decorators";
-import {IAfterConstruct, Inject} from "@typeix/di";
+import {IAfterConstruct, Inject, Injectable} from "@typeix/di";
 import {HttpMethod, Router} from "@typeix/router";
 import {Request} from "../";
 import {
@@ -16,7 +16,6 @@ import {Logger} from "@typeix/logger";
 
 describe("fakeHttpServer", () => {
 
-  let handler: Function;
 
   let identity: APIGatewayEventIdentity = {
     cognitoIdentityPoolId: null,
@@ -76,8 +75,16 @@ describe("fakeHttpServer", () => {
     requestContext: requestContext
   };
 
+  @Injectable()
+  class WhateverService{
+    wrap(event) {
+      return event;
+    }
+  }
+
   @Controller({
-    name: "core"
+    name: "core",
+    providers: [WhateverService]
   })
   class MyController {
 
@@ -95,8 +102,11 @@ describe("fakeHttpServer", () => {
 
     @Produces("application/json")
     @Action("property")
-    actionProperty(@LambdaEvent() event) {
-      return event;
+    actionProperty(@LambdaEvent() event,
+                   @Inject() service: WhateverService,
+                   @Inject(WhateverService) serviceB
+    ) {
+      return serviceB.wrap(service.wrap(event));
     }
   }
 
@@ -129,13 +139,10 @@ describe("fakeHttpServer", () => {
     @Inject() private router: Router;
   }
 
-  beforeEach(() => {
-    handler = lambdaServer(MyModule);
-  });
 
   it("LambdaInterceptor core/index", (done) => {
     let context = {};
-    handler = lambdaServer(MyModule, {}, (request, forward) => {
+    let handler = lambdaServer(MyModule, {}, (request, forward) => {
       forward("/property", "GET");
     });
     let event1 = {
@@ -175,6 +182,7 @@ describe("fakeHttpServer", () => {
   });
 
   it("Api Gateway Check core/index", (done) => {
+    let handler = lambdaServer(MyModule);
     let context = {};
     handler(event, context, (error, data) => {
       expect(data.body).toEqual(JSON.stringify(event));
@@ -185,18 +193,24 @@ describe("fakeHttpServer", () => {
 
 
   it("Api Gateway Check core/property", (done) => {
+    let handler = lambdaServer(MyModule);
     let context = {};
     let cEvent = Object.assign(event, {path: "/property"});
     expect(cEvent.path).toBe("/property");
     handler(cEvent, context, (error, data) => {
-      expect(data.body).toEqual(JSON.stringify(cEvent));
-      expect(data.statusCode).toBe(200);
-      done();
+      if (error) {
+        done(error);
+      } else {
+        expect(data.body).toEqual(JSON.stringify(cEvent));
+        expect(data.statusCode).toBe(200);
+        done();
+      }
     }).catch(done);
   });
 
 
   it("Api Gateway Error Check", (done) => {
+    let handler = lambdaServer(MyModule);
     let context = {};
     let cEvent = Object.assign(event, {path: "/not-found"});
     handler(cEvent, context, (error, data) => {

@@ -353,9 +353,11 @@ export class ControllerResolver {
       this.getEventEmitter().emit("contentType", contentType);
     }
     // resolve action params
-    let actionParams = metadata.find(item => item.metadataKey === TS_PARAMS)?.args || [];
+    let actionParams = metadata.find(item => item.metadataKey === TS_PARAMS)?.args?.slice() || [];
     let tokens = [Inject, Param, Chain, ErrorMessage];
     let paramsMetadata: Array<IMetadata> = metadata.filter(item => inArray(tokens, item.decorator));
+
+    this.logger.debug("Controller.processAction", {actionParams, mappedAction});
 
     if (isArray(paramsMetadata)) {
       for (let item of paramsMetadata) {
@@ -371,7 +373,20 @@ export class ControllerResolver {
             actionParams.splice(item.paramIndex, 1, injector.get(Chain.toString()));
             break;
           case Inject:
-            actionParams.splice(item.paramIndex, 1, isFalsy(item.args.token) ? injector.get(item.designType) : injector.get(item.args.token));
+            if (isDefined(item.args.token)) {
+              actionParams.splice(item.paramIndex, 1, injector.get(item.args.token));
+            } else {
+              let token = actionParams[item.paramIndex];
+              if (injector.has(token)) {
+                actionParams.splice(item.paramIndex, 1, injector.get(token));
+              } else {
+                throw new RouterError(
+                  400,
+                  `@Inject has no provider for token: ${token.toString()} on action ${mappedAction.propertyKey?.toString()} for param ${item.paramIndex}`,
+                  {token, mappedAction}
+                );
+              }
+            }
             break;
           case ErrorMessage:
             actionParams.splice(item.paramIndex, 1, injector.get(RouterError.toString()));
